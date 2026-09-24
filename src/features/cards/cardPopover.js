@@ -231,8 +231,7 @@
     filtered.forEach((card) => {
       const cardEl = document.createElement("div");
       cardEl.className = `bg-card-node-item ${card.isPinned ? "is-pinned" : ""}`;
-
-      const isAttached = attachedCards.some((c) => c.id === card.id);
+      cardEl.setAttribute("draggable", "true");
 
       cardEl.innerHTML = `
         <div class="bg-card-node-header">
@@ -243,15 +242,25 @@
             <button type="button" class="bg-card-action-btn bg-card-pin-btn" title="${card.isPinned ? "Unpin" : "Pin"}">
               ${card.isPinned ? "★" : "☆"}
             </button>
-            <button type="button" class="bg-card-action-btn bg-card-attach-btn ${isAttached ? "is-attached" : ""}" title="${isAttached ? "Attached to prompt" : "Attach to prompt"}">
-              ${isAttached ? "✓" : "📎"}
-            </button>
             <button type="button" class="bg-card-action-btn bg-card-copy-btn" title="Copy Content">📋 Copy</button>
             <button type="button" class="bg-card-action-btn bg-card-del-btn" title="Delete Card">🗑️</button>
           </div>
         </div>
         <div class="bg-card-content" title="Click to expand/collapse full card">${escapeHtml(card.content)}</div>
       `;
+
+      cardEl.addEventListener("dragstart", (e) => {
+        const plainText = (card.content || "").trim();
+        const cardData = {
+          id: card.id,
+          title: card.title,
+          content: plainText,
+          timestamp: card.timestamp
+        };
+        e.dataTransfer.setData("application/x-bettergravity-card", JSON.stringify(cardData));
+        e.dataTransfer.setData("text/plain", plainText);
+        e.dataTransfer.effectAllowed = "copy";
+      });
 
       cardEl.querySelector(".bg-card-content")?.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -261,16 +270,6 @@
       cardEl.querySelector(".bg-card-pin-btn")?.addEventListener("click", (e) => {
         e.stopPropagation();
         togglePinCard(card.id);
-        renderCardsPopoverContent();
-      });
-
-      cardEl.querySelector(".bg-card-attach-btn")?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (isAttached) {
-          detachCardFromComposer(card.id);
-        } else {
-          attachCardToComposer(card);
-        }
         renderCardsPopoverContent();
       });
 
@@ -417,110 +416,108 @@
   }
 
   // --------------------------------------------------------------------------
-  // Attached Cards Capsule Bar & React Fiber Submit Hook
+  // Drag & Drop Card Text Directly into Chat Composer
   // --------------------------------------------------------------------------
 
-  function renderAttachedCardsSlot() {
-    const composer = document.querySelector('[data-testid="agent-input-box"]');
-    if (!composer) return;
-
-    let slot = document.getElementById("bg-timeslip-attached-slot");
-    if (attachedCards.length === 0) {
-      if (slot) slot.remove();
-      return;
-    }
-
-    if (!slot) {
-      slot = document.createElement("div");
-      slot.id = "bg-timeslip-attached-slot";
-      slot.className = "bg-attached-cards-bar";
-      composer.prepend(slot);
-    }
-
-    slot.innerHTML = "";
-    attachedCards.forEach((c) => {
-      const cap = document.createElement("div");
-      cap.className = "bg-attached-capsule";
-      cap.title = `Attached Context: ${c.title}`;
-      cap.innerHTML = `
-        <span class="bg-capsule-icon">📎</span>
-        <span class="bg-capsule-title">${escapeHtml(c.title)}</span>
-        <button type="button" class="bg-capsule-remove" title="Remove attachment">✕</button>
-      `;
-
-      cap.querySelector(".bg-capsule-remove")?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        detachCardFromComposer(c.id);
-        renderCardsPopoverContent();
-      });
-
-      slot.appendChild(cap);
-    });
-  }
-
-  function hookComposerSubmit() {
+  function insertTextIntoComposer(text) {
+    if (!text) return false;
     const box = document.querySelector('[data-testid="agent-input-box"]');
     if (!box) return false;
 
-    let fiber = null;
-    for (const k in box) {
-      if (k.startsWith("__reactFiber$") || k.startsWith("__reactInternalInstance$")) {
-        fiber = box[k];
-        break;
-      }
+    const editor =
+      box.querySelector('[contenteditable="true"]') ||
+      box.querySelector("textarea") ||
+      box;
+
+    editor.focus();
+
+    if (editor instanceof HTMLTextAreaElement || editor instanceof HTMLInputElement) {
+      const start = editor.selectionStart ?? editor.value.length;
+      const end = editor.selectionEnd ?? editor.value.length;
+      const existing = editor.value;
+      const toInsert = existing.trim() ? `\n\n${text}` : text;
+      editor.setRangeText(toInsert, start, end, "end");
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      return true;
     }
-    if (!fiber) return false;
 
-    let cur = fiber;
-    let depth = 0;
-    while (cur && depth < 25) {
-      const props = cur.memoizedProps;
-      if (props && typeof props.handleSubmit === "function") {
-        if (!props.handleSubmit.__bgTimeslipHooked) {
-          const origSubmit = props.handleSubmit;
-          const hookedSubmit = async function (cc, ld, Gk, Xs, $R, aS) {
-            if (attachedCards.length > 0) {
-              const cardsText = attachedCards
-                .map((c) => {
-                  const clean = (c.content || "").trim();
-                  return `[Context Card: ${c.title}]\n${clean}`;
-                })
-                .join("\n\n");
-
-              const cardChunk = {
-                chunk: {
-                  case: "text",
-                  value: `${cardsText}\n\n`
-                }
-              };
-
-              if (Array.isArray(cc)) {
-                cc = [cardChunk, ...cc];
-              }
-
-              plugin.log?.info?.(`[TIMESLIP_CARDS] Injected ${attachedCards.length} context card(s) into submit payload`);
-              clearAttachedCards();
-            }
-
-            return origSubmit.call(this, cc, ld, Gk, Xs, $R, aS);
-          };
-
-          hookedSubmit.__bgTimeslipHooked = true;
-          props.handleSubmit = hookedSubmit;
-          hasHookedComposer = true;
-        }
-        return true;
-      }
-      cur = cur.return;
-      depth += 1;
+    // Lexical / contenteditable editor
+    const sel = window.getSelection();
+    if (!sel || !editor.contains(sel.anchorNode)) {
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
     }
-    return false;
+
+    const existingText = (editor.textContent || "").trim();
+    const toInsert = existingText ? `\n\n${text}` : text;
+    document.execCommand("insertText", false, toInsert);
+    return true;
   }
 
-  // Subscribe to store changes to keep attached capsules updated
-  subscribeCardsChange(() => {
-    renderAttachedCardsSlot();
-  });
+  function attachComposerDropTarget() {
+    const legacySlot = document.getElementById("bg-timeslip-attached-slot");
+    if (legacySlot) legacySlot.remove();
+
+    const box = document.querySelector('[data-testid="agent-input-box"]');
+    if (!box || box.dataset.bgTimeslipDropTargetAttached) return;
+
+    box.dataset.bgTimeslipDropTargetAttached = "true";
+
+    box.addEventListener(
+      "dragover",
+      (e) => {
+        if (
+          e.dataTransfer.types.includes("application/x-bettergravity-card") ||
+          e.dataTransfer.types.includes("text/plain")
+        ) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+          box.classList.add("bg-composer-drop-active");
+        }
+      },
+      true
+    );
+
+    box.addEventListener(
+      "dragleave",
+      (e) => {
+        if (!box.contains(e.relatedTarget)) {
+          box.classList.remove("bg-composer-drop-active");
+        }
+      },
+      true
+    );
+
+    box.addEventListener(
+      "drop",
+      (e) => {
+        box.classList.remove("bg-composer-drop-active");
+        const rawCard = e.dataTransfer.getData("application/x-bettergravity-card");
+        let textToInsert = "";
+        if (rawCard) {
+          try {
+            const parsed = JSON.parse(rawCard);
+            textToInsert = (parsed.content || "").trim();
+          } catch (_) {}
+        }
+        if (!textToInsert) {
+          textToInsert = (e.dataTransfer.getData("text/plain") || "").trim();
+        }
+        if (!textToInsert) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        insertTextIntoComposer(textToInsert);
+        showToast("Card text copied to prompt", "success");
+      },
+      true
+    );
+  }
 
   function renderRailCardsIcon(rail) {
     if (!rail) return;

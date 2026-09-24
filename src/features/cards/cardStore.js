@@ -11,7 +11,6 @@
 
   let timeslipCards = [];
   let recentBtw = [];
-  let attachedCards = [];
   const cardChangeListeners = new Set();
 
   function subscribeCardsChange(fn) {
@@ -25,7 +24,7 @@
   function notifyCardsChange() {
     cardChangeListeners.forEach((fn) => {
       try {
-        fn(timeslipCards, attachedCards);
+        fn(timeslipCards);
       } catch (err) {
         plugin.log?.warn?.(`[CARDS_NOTIFY_ERR] ${err.message}`);
       }
@@ -191,7 +190,6 @@
   function deleteCard(cardId) {
     const prevLen = timeslipCards.length;
     timeslipCards = timeslipCards.filter((c) => c.id !== cardId);
-    attachedCards = attachedCards.filter((c) => c.id !== cardId);
     if (timeslipCards.length !== prevLen) {
       saveCards(timeslipCards);
       showToast("Card deleted", "info");
@@ -203,29 +201,6 @@
     if (target) {
       target.isPinned = !target.isPinned;
       saveCards(timeslipCards);
-    }
-  }
-
-  function attachCardToComposer(card) {
-    if (!card) return;
-    if (attachedCards.some((c) => c.id === card.id)) {
-      showToast("Card already attached to composer", "info");
-      return;
-    }
-    attachedCards.push(card);
-    notifyCardsChange();
-    showToast(`Attached "${card.title}" to composer`, "success");
-  }
-
-  function detachCardFromComposer(cardId) {
-    attachedCards = attachedCards.filter((c) => c.id !== cardId);
-    notifyCardsChange();
-  }
-
-  function clearAttachedCards() {
-    if (attachedCards.length > 0) {
-      attachedCards = [];
-      notifyCardsChange();
     }
   }
 

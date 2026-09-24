@@ -79,8 +79,8 @@
   plugin.dom.observe('[data-testid="conversation-view"]', (target) => {
     if (isUserTyping()) return;
     if (target?.closest?.('#bg-timeline-hud, #bg-header-health-pill, #bg-header-export-btn, #bg-header-cards-btn, textarea, [contenteditable]')) return;
-    if (typeof hookComposerSubmit === "function") {
-      hookComposerSubmit();
+    if (typeof attachComposerDropTarget === "function") {
+      attachComposerDropTarget();
     }
     if (typeof mountComposerCardsButton === "function") {
       mountComposerCardsButton();
@@ -204,7 +204,7 @@
     close: () => (typeof closeCardsPopover === "function" ? closeCardsPopover() : null),
     toggle: (anchor) => (typeof toggleCardsPopover === "function" ? toggleCardsPopover(anchor) : null),
     add: (content, title, origin, tags) => (typeof addCard === "function" ? addCard(content, title, origin, tags) : null),
-    attach: (card) => (typeof attachCardToComposer === "function" ? attachCardToComposer(card) : null)
+    insert: (text) => (typeof insertTextIntoComposer === "function" ? insertTextIntoComposer(text) : null)
   };
 
   globalThis.__bettergravityTimeslipCockpit = {
