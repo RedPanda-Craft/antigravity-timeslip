@@ -1275,6 +1275,227 @@
   text-align: center;
 }
 
+/* Dual-Tab Segmented Switcher */
+.bg-popover-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #11111b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 3px;
+  margin: 6px 12px 4px;
+  user-select: none;
+}
+
+.bg-popover-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 27px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #a6adc8;
+  font-size: 11.5px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 120ms ease;
+  line-height: 1;
+  user-select: none;
+}
+
+.bg-popover-tab:hover {
+  color: #cdd6f4;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.bg-popover-tab.active {
+  background: rgba(203, 166, 247, 0.16);
+  border-color: rgba(203, 166, 247, 0.35);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.bg-tab-badge {
+  font-size: 10px;
+  color: #cba6f7;
+  background: rgba(203, 166, 247, 0.14);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.bg-popover-tab.active .bg-tab-badge {
+  background: rgba(203, 166, 247, 0.28);
+  color: #ffffff;
+}
+
+/* Staged Side Notes Items (Recent BTW) */
+.bg-recent-item {
+  background: #1e1e2e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.bg-recent-item:hover {
+  border-color: rgba(203, 166, 247, 0.3);
+  background: #1f1f33;
+}
+
+.bg-recent-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.bg-recent-item-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #cba6f7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 210px;
+}
+
+.bg-recent-time {
+  font-size: 10px;
+  color: #6c7086;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.bg-recent-item-status {
+  display: flex;
+  align-items: center;
+}
+
+.bg-recent-staged-badge {
+  display: inline-block;
+  background: rgba(249, 226, 175, 0.09);
+  border: 1px solid rgba(249, 226, 175, 0.22);
+  color: #f9e2af;
+  font-size: 9.5px;
+  padding: 0 5px;
+  border-radius: 4px;
+  line-height: 1.4;
+  user-select: none;
+}
+
+.bg-recent-promoted-badge {
+  display: inline-block;
+  background: rgba(166, 227, 161, 0.12);
+  border: 1px solid rgba(166, 227, 161, 0.3);
+  color: #a6e3a1;
+  font-size: 9.5px;
+  padding: 0 5px;
+  border-radius: 4px;
+  line-height: 1.4;
+  user-select: none;
+}
+
+.bg-recent-promote-btn {
+  color: #f9e2af !important;
+  border-color: rgba(249, 226, 175, 0.3) !important;
+  background: rgba(249, 226, 175, 0.08) !important;
+}
+
+.bg-recent-promote-btn:hover {
+  background: rgba(249, 226, 175, 0.22) !important;
+  color: #ffffff !important;
+}
+
+.bg-recent-promoted-btn {
+  color: #a6e3a1 !important;
+  border-color: rgba(166, 227, 161, 0.3) !important;
+  background: rgba(166, 227, 161, 0.08) !important;
+  cursor: default !important;
+}
+
+.bg-recent-footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: rgba(17, 17, 27, 0.7);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bg-recent-clear-btn {
+  background: rgba(243, 139, 168, 0.08);
+  border: 1px solid rgba(243, 139, 168, 0.25);
+  color: #f38ba8;
+  font-size: 10.5px;
+  padding: 4px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 120ms ease;
+  user-select: none;
+}
+
+.bg-recent-clear-btn:hover:not(:disabled) {
+  background: rgba(243, 139, 168, 0.2);
+  color: #ffffff;
+}
+
+.bg-card-branch-btn {
+  color: #cba6f7 !important;
+  border-color: rgba(203, 166, 247, 0.35) !important;
+  background: rgba(203, 166, 247, 0.08) !important;
+  transition: all 120ms ease !important;
+}
+
+.bg-card-branch-btn:hover {
+  background: rgba(203, 166, 247, 0.22) !important;
+  border-color: rgba(203, 166, 247, 0.55) !important;
+  color: #ffffff !important;
+}
+
+.bg-card-content {
+  font-size: 11px;
+  color: #a6adc8;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 1px 2px;
+  transition: background 120ms ease;
+}
+
+.bg-card-content:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.bg-card-content.expanded {
+  display: block !important;
+  -webkit-line-clamp: unset !important;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px 6px;
+  border-left: 2px solid #cba6f7;
+}
+
 /* Attached Capsules Bar above Composer */
 .bg-attached-cards-bar {
   display: flex;

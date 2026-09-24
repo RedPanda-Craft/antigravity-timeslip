@@ -2960,9 +2960,12 @@
   const STORAGE_CARDS_KEY = "__bg_timeslip_cards_v1";
   const LEGACY_CARDS_KEY_V1 = "__bg_voyager_cards_v1";
   const LEGACY_STORAGE_CARDS_KEY = "__bg_side_chat_cards_v1";
+  const STORAGE_RECENT_BTW_KEY = "__bg_side_questions_recent_v1";
   const MAX_CARDS = 60;
+  const MAX_RECENT_BTW = 25;
 
   let timeslipCards = [];
+  let recentBtw = [];
   let attachedCards = [];
   const cardChangeListeners = new Set();
 
@@ -3181,9 +3184,254 @@
     }
   }
 
+  function formatRelativeTime(ts) {
+    if (!ts) return "";
+    const now = Date.now();
+    const diff = Math.max(0, now - ts);
+    const sec = Math.floor(diff / 1000);
+    if (sec < 60) return "Just now";
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min}m ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}h ago`;
+    const day = Math.floor(hr / 24);
+    if (day < 7) return `${day}d ago`;
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
+  function loadRecentBtw() {
+    let list = null;
+    // 1. Primary: BetterGravity physical disk storage
+    try {
+      const diskData = plugin.storage?.get?.("recent_btw", null);
+      if (Array.isArray(diskData) && diskData.length > 0) {
+        list = diskData;
+      }
+    } catch (_) {}
+
+    // 2. Fallback: side-chat plugin storage in storage.json or localStorage
+    if (!list) {
+      try {
+        const raw = localStorage.getItem(STORAGE_RECENT_BTW_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            list = parsed;
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (!Array.isArray(list)) list = [];
+
+    return list.map((it) => ({
+      id: it.id || `recent_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      title: it.title || "Side Note",
+      question: it.question || "",
+      content: sanitizeCardContent(it.content || ""),
+      timestamp: it.timestamp || Date.now(),
+      conversationId: it.conversationId || "default_convo",
+      isPromoted: Boolean(it.isPromoted)
+    }));
+  }
+
+  function saveRecentBtw(list) {
+    const sliced = (Array.isArray(list) ? list : []).slice(0, MAX_RECENT_BTW);
+    recentBtw = sliced;
+    try {
+      plugin.storage?.set?.("recent_btw", sliced);
+    } catch (err) {
+      plugin.log?.warn?.(`[STORAGE_WARN] Failed to save recent btw to disk: ${err.message}`);
+    }
+    try {
+      localStorage.setItem(STORAGE_RECENT_BTW_KEY, JSON.stringify(sliced));
+    } catch (err) {
+      plugin.log?.warn?.(`[STORAGE_WARN] Failed to save recent btw to localStorage: ${err.message}`);
+    }
+  }
+
+  function pushToRecentBtw(fullQuestion, cleanAnswer, cid) {
+    const q = String(fullQuestion || "").trim();
+    const a = sanitizeCardContent(cleanAnswer || "");
+    if (!q && !a) return;
+    if (!a || a.startsWith("Thinking...") || a.includes("Thinking...")) return;
+
+    let structuredContent = a;
+    if (!structuredContent.toLowerCase().startsWith("side question:")) {
+      structuredContent = q ? `Side Question: ${q}\n\n${a}` : a;
+    }
+
+    let recent = loadRecentBtw();
+    const existingIdx = recent.findIndex(
+      (it) => (q && it.question === q) || it.content === structuredContent
+    );
+
+    if (existingIdx !== -1) {
+      if (recent[existingIdx].content === structuredContent) {
+        return;
+      }
+      recent[existingIdx].content = structuredContent;
+      recent[existingIdx].timestamp = Date.now();
+    } else {
+      let title = q;
+      if (title.length > 24) title = title.slice(0, 24) + "...";
+      if (!title) {
+        const firstLine = a.split("\n")[0].replace(/^[#*\-•\s💡🗂️]+/, "").trim();
+        title = firstLine.length > 24 ? firstLine.slice(0, 24) + "..." : firstLine || "Side Note";
+      }
+
+      const newItem = {
+        id: `recent_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        title,
+        question: q,
+        content: structuredContent,
+        timestamp: Date.now(),
+        conversationId: cid || getCurrentConversationId(),
+        isPromoted: false
+      };
+      recent.unshift(newItem);
+    }
+
+    // Enforce 25 items limit (FIFO with promotion immunity)
+    if (recent.length > MAX_RECENT_BTW) {
+      let removeIdx = -1;
+      for (let i = recent.length - 1; i >= 0; i--) {
+        if (!recent[i].isPromoted) {
+          removeIdx = i;
+          break;
+        }
+      }
+      if (removeIdx !== -1) {
+        recent.splice(removeIdx, 1);
+      } else {
+        recent.pop();
+      }
+    }
+
+    saveRecentBtw(recent);
+    if (typeof updateCardsPopoverCounts === "function") {
+      updateCardsPopoverCounts();
+    }
+  }
+
+  function promoteRecentToCard(item) {
+    if (!item || item.isPromoted) return;
+
+    const originMeta = {
+      conversationId: item.conversationId || getCurrentConversationId(),
+      anchorQuestion: item.question || item.title,
+      source: "btw",
+      timestamp: item.timestamp || Date.now()
+    };
+
+    addCard(item.content, item.title, originMeta, ["btw"]);
+
+    item.isPromoted = true;
+    saveRecentBtw(recentBtw);
+    if (typeof updateCardsPopoverCounts === "function") {
+      updateCardsPopoverCounts();
+    }
+  }
+
+  function clearRecentStash() {
+    const unpromotedCount = recentBtw.filter((it) => !it.isPromoted).length;
+    if (unpromotedCount === 0) return 0;
+    recentBtw = recentBtw.filter((it) => it.isPromoted);
+    saveRecentBtw(recentBtw);
+    if (typeof updateCardsPopoverCounts === "function") {
+      updateCardsPopoverCounts();
+    }
+    return unpromotedCount;
+  }
+
+  function assembleDistilledContext(item) {
+    const title = item.title || "Side Discussion";
+    const sideContent = (item.content || "").trim();
+    const sideQuestion = item.question || "";
+    const parentId = item.conversationId || getCurrentConversationId();
+
+    const parts = [
+      `[💡 Spore Branch from Main Thread]`,
+      `- Parent Thread: ${parentId || "Current Workspace"}`,
+      `- Core Topic: ${title}`
+    ];
+
+    if (sideQuestion) {
+      parts.push(`- Anchor Question: ${sideQuestion}`);
+    }
+
+    parts.push(
+      `\n[Side Discussion Notes]`,
+      sideContent,
+      `\n---\nPlease proceed with deeper exploration and implementation based on the above findings:`
+    );
+
+    return parts.join("\n");
+  }
+
+  async function promoteToSporeBranch(item) {
+    const branchTree = globalThis.__bettergravityBranchTree;
+    if (!branchTree || typeof branchTree.createSporeBranch !== "function") {
+      showToast("Branch tree module not ready, please retry later", "error");
+      return;
+    }
+
+    const parentId = item.conversationId || getCurrentConversationId();
+    if (!parentId) {
+      showToast("Cannot resolve parent conversation ID", "error");
+      return;
+    }
+
+    const title = item.title || "💡 Spore Branch";
+    const distilledPrompt = assembleDistilledContext(item);
+    const originAnchor = item.question || item.title || "";
+
+    showToast("Elevating to branch session...", "info");
+    if (typeof closeCardsPopover === "function") {
+      closeCardsPopover();
+    }
+
+    const forkedId = await branchTree.createSporeBranch({
+      parentId,
+      title,
+      distilledPrompt,
+      originAnchor,
+      originTurnIndex: 0
+    });
+
+    if (forkedId) {
+      showToast("Successfully elevated to branch session!", "success");
+    }
+  }
+
+  function harvestAndPersistSideQuestions() {
+    const cid = getCurrentConversationId();
+    if (!cid || cid === "default_convo") return;
+
+    const sidePanels = document.querySelectorAll('[data-testid="side-question-panel"]');
+    sidePanels.forEach((panel) => {
+      const qEl = panel.querySelector('[data-testid="side-question-question"]');
+      const userText = (qEl?.textContent || "").replace(/^Side Question:\s*(?:btw\s*)?/i, "").trim();
+      if (!userText) return;
+
+      const answerEl = panel.querySelector('[data-testid="side-question-answer"]');
+      if (!answerEl) return;
+      const clone = answerEl.cloneNode(true);
+      clone.querySelectorAll('style, script, svg, [aria-label*="Thought"], [aria-label*="Thinking"], [class*="thinking"], [data-testid*="thought"], button, [role="button"], .bg-btw-card-btn-footer').forEach((el) => el.remove());
+      const responseText = sanitizeCardContent(clone.textContent || "");
+      if (!responseText || responseText.startsWith("Thinking...") || responseText.includes("Thinking...")) return;
+
+      pushToRecentBtw(userText, responseText, cid);
+    });
+  }
+
   // Initialize store on script load
   timeslipCards = loadCards();
   saveCards(timeslipCards, true);
+  recentBtw = loadRecentBtw();
+  saveRecentBtw(recentBtw);
+
 
 
 
@@ -3199,6 +3447,8 @@
   let activeCardSearch = "";
   let activeCardTag = "all";
   let hasHookedComposer = false;
+
+  let activeCardTab = "cards"; // "cards" | "recent"
 
   function isCardsPopoverOpen() {
     return Boolean(cardsPopoverEl && cardsPopoverEl.classList.contains("is-open"));
@@ -3274,40 +3524,96 @@
     pop.innerHTML = `
       <div class="bg-cards-popover-header">
         <div class="bg-cards-popover-title">
-          <span class="bg-cards-title-icon">🗂️</span>
+          <span class="bg-cards-title-icon">📁</span>
           <span>Context Cards</span>
-          <span class="bg-cards-count-badge" id="bg-cards-count-badge">0</span>
         </div>
         <button type="button" class="bg-cards-close-btn" title="Close Cards (Esc)">✕</button>
       </div>
+      <div class="bg-popover-tabs">
+        <button type="button" class="bg-popover-tab ${activeCardTab === "cards" ? "active" : ""}" data-tab="cards">
+          <span>⭐</span> <span>Cards</span> <span class="bg-tab-badge bg-tab-badge-cards">${timeslipCards.length}</span>
+        </button>
+        <button type="button" class="bg-popover-tab ${activeCardTab === "recent" ? "active" : ""}" data-tab="recent">
+          <span>🕒</span> <span>Side Stash</span> <span class="bg-tab-badge bg-tab-badge-recent">${recentBtw.length}/${MAX_RECENT_BTW}</span>
+        </button>
+      </div>
       <div class="bg-cards-search-box">
-        <input type="text" class="bg-cards-search-input" placeholder="Search cards or tags..." />
+        <input type="text" class="bg-cards-search-input" placeholder="${activeCardTab === "cards" ? "🔍 Search cards, content, or tags..." : "🔍 Search recent side discussions..."}" value="${escapeHtml(activeCardSearch)}" />
       </div>
       <div class="bg-cards-tags-bar" id="bg-cards-tags-bar"></div>
       <div class="bg-cards-list-container" id="bg-cards-list-container"></div>
-      <div class="bg-cards-popover-footer">
+      <div class="bg-recent-footer-bar" id="bg-recent-footer-bar" style="display:none;"></div>
+      <div class="bg-cards-popover-footer" id="bg-cards-popover-footer">
         <span class="bg-cards-tip">Click 📌 to pin · Click 📎 to attach to prompt</span>
       </div>
     `;
 
     pop.querySelector(".bg-cards-close-btn")?.addEventListener("click", closeCardsPopover);
 
+    pop.querySelectorAll(".bg-popover-tab").forEach((tabBtn) => {
+      tabBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const targetTab = tabBtn.dataset.tab;
+        if (activeCardTab !== targetTab) {
+          activeCardTab = targetTab;
+          activeCardSearch = "";
+          const sInput = pop.querySelector(".bg-cards-search-input");
+          if (sInput) sInput.value = "";
+          renderCardsPopoverContent();
+        }
+      });
+    });
+
     const searchInput = pop.querySelector(".bg-cards-search-input");
     searchInput?.addEventListener("input", (e) => {
       activeCardSearch = (e.target.value || "").trim().toLowerCase();
-      renderCardsList(pop);
+      if (activeCardTab === "cards") {
+        renderCardsList(pop);
+      } else {
+        renderRecentList(pop);
+      }
     });
 
     return pop;
   }
 
+  function updateCardsPopoverCounts() {
+    if (!cardsPopoverEl) return;
+    const cardsBadge = cardsPopoverEl.querySelector(".bg-tab-badge-cards");
+    if (cardsBadge) cardsBadge.textContent = String(timeslipCards.length);
+    const recentBadge = cardsPopoverEl.querySelector(".bg-tab-badge-recent");
+    if (recentBadge) recentBadge.textContent = `${recentBtw.length}/${MAX_RECENT_BTW}`;
+  }
+
   function renderCardsPopoverContent() {
     if (!cardsPopoverEl) return;
-    const badge = cardsPopoverEl.querySelector("#bg-cards-count-badge");
-    if (badge) badge.textContent = String(timeslipCards.length);
 
-    renderTagsBar(cardsPopoverEl);
-    renderCardsList(cardsPopoverEl);
+    cardsPopoverEl.querySelectorAll(".bg-popover-tab").forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.tab === activeCardTab);
+    });
+
+    const tagsBar = cardsPopoverEl.querySelector("#bg-cards-tags-bar");
+    const footerRecent = cardsPopoverEl.querySelector("#bg-recent-footer-bar");
+    const footerCards = cardsPopoverEl.querySelector("#bg-cards-popover-footer");
+    const searchInput = cardsPopoverEl.querySelector(".bg-cards-search-input");
+
+    updateCardsPopoverCounts();
+
+    if (activeCardTab === "cards") {
+      if (tagsBar) tagsBar.style.display = "flex";
+      if (footerRecent) footerRecent.style.display = "none";
+      if (footerCards) footerCards.style.display = "block";
+      if (searchInput) searchInput.placeholder = "🔍 Search cards, content, or tags...";
+      renderTagsBar(cardsPopoverEl);
+      renderCardsList(cardsPopoverEl);
+    } else {
+      if (tagsBar) tagsBar.style.display = "none";
+      if (footerRecent) footerRecent.style.display = "flex";
+      if (footerCards) footerCards.style.display = "none";
+      if (searchInput) searchInput.placeholder = "🔍 Search recent side discussions...";
+      renderRecentList(cardsPopoverEl);
+      renderRecentFooter(cardsPopoverEl);
+    }
   }
 
   function renderTagsBar(container) {
@@ -3357,7 +3663,7 @@
         <div class="bg-cards-empty">
           <div class="bg-cards-empty-icon">📭</div>
           <div class="bg-cards-empty-text">No context cards found</div>
-          <div class="bg-cards-empty-sub">Extract turns from Timeline or save notes as cards</div>
+          <div class="bg-cards-empty-sub">Extract turns from Timeline or promote from Side Stash</div>
         </div>
       `;
       return;
@@ -3381,12 +3687,18 @@
             <button type="button" class="bg-card-action-btn bg-card-attach-btn ${isAttached ? "is-attached" : ""}" title="${isAttached ? "Attached to prompt" : "Attach to prompt"}">
               ${isAttached ? "✓" : "📎"}
             </button>
-            <button type="button" class="bg-card-action-btn bg-card-copy-btn" title="Copy Content">📋</button>
+            <button type="button" class="bg-card-action-btn bg-card-branch-btn" title="Elevate to branch session">🔀 Branch</button>
+            <button type="button" class="bg-card-action-btn bg-card-copy-btn" title="Copy Content">📋 Copy</button>
             <button type="button" class="bg-card-action-btn bg-card-del-btn" title="Delete Card">🗑️</button>
           </div>
         </div>
-        <div class="bg-card-node-snippet">${escapeHtml((card.content || "").slice(0, 140))}${(card.content || "").length > 140 ? "..." : ""}</div>
+        <div class="bg-card-content" title="Click to expand/collapse full card">${escapeHtml(card.content)}</div>
       `;
+
+      cardEl.querySelector(".bg-card-content")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.currentTarget.classList.toggle("expanded");
+      });
 
       cardEl.querySelector(".bg-card-pin-btn")?.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -3404,6 +3716,11 @@
         renderCardsPopoverContent();
       });
 
+      cardEl.querySelector(".bg-card-branch-btn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        promoteToSporeBranch(card);
+      });
+
       cardEl.querySelector(".bg-card-copy-btn")?.addEventListener("click", (e) => {
         e.stopPropagation();
         navigator.clipboard?.writeText(card.content || "");
@@ -3417,6 +3734,133 @@
       });
 
       listEl.appendChild(cardEl);
+    });
+  }
+
+  function renderRecentList(container) {
+    const listEl = container.querySelector("#bg-cards-list-container");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+
+    let filtered = [...recentBtw];
+
+    if (activeCardSearch) {
+      const q = activeCardSearch.toLowerCase();
+      filtered = filtered.filter((it) => {
+        const titleMatch = (it.title || "").toLowerCase().includes(q);
+        const contentMatch = (it.content || "").toLowerCase().includes(q);
+        const qMatch = (it.question || "").toLowerCase().includes(q);
+        return titleMatch || contentMatch || qMatch;
+      });
+    }
+
+    if (filtered.length === 0) {
+      const emptyMsg = recentBtw.length === 0
+        ? `No staged side notes<br/><span style="font-size:10.5px;color:#6c7086;margin-top:4px;display:inline-block;">Auto-staged from side discussions, max 25 items (FIFO)</span>`
+        : "No matching staged records found";
+      listEl.innerHTML = `<div style="color:#6c7086;font-size:11.5px;text-align:center;padding:28px 0;line-height:1.5;">${emptyMsg}</div>`;
+      return;
+    }
+
+    filtered.forEach((item) => {
+      const itemEl = document.createElement("div");
+      itemEl.className = "bg-recent-item";
+      itemEl.setAttribute("draggable", "true");
+
+      const displayTitle = (item.title || "").replace(/^(?:Side Question:\s*)+/gi, "").trim() || "Side Note";
+      const displayContent = (item.content || "").replace(/^(?:Side Question:\s*)+/gi, "Side Question: ");
+
+      itemEl.innerHTML = `
+        <div class="bg-recent-item-header">
+          <span class="bg-recent-item-title" title="${escapeHtml(displayTitle)}">💡 ${escapeHtml(displayTitle)}</span>
+          <span class="bg-recent-time">🕒 ${formatRelativeTime(item.timestamp)}</span>
+        </div>
+        <div class="bg-card-content" title="Click to expand/collapse full text">${escapeHtml(displayContent)}</div>
+        <div class="bg-card-footer">
+          <div class="bg-recent-item-status">
+            ${
+              item.isPromoted
+                ? `<span class="bg-recent-promoted-badge" title="Saved to permanent cards">⭐ Faved</span>`
+                : `<span class="bg-recent-staged-badge" title="Staged (FIFO rolling eviction)">🕒 Staged</span>`
+            }
+          </div>
+          <div class="bg-card-actions">
+            ${
+              item.isPromoted
+                ? `<button type="button" class="bg-card-action-btn bg-recent-promoted-btn" disabled title="Saved to Context Cards">⭐ Faved</button>`
+                : `<button type="button" class="bg-card-action-btn bg-recent-promote-btn" title="Save to permanent Context Cards">⭐ Fav</button>`
+            }
+            <button type="button" class="bg-card-action-btn bg-card-branch-btn" title="Elevate to branch session (with condensed context)">🔀 Branch</button>
+            <button type="button" class="bg-card-action-btn bg-card-copy-btn" title="Copy text to clipboard">📋 Copy</button>
+            <button type="button" class="bg-card-del-btn bg-recent-del-btn" title="Discard this staged note">🗑️</button>
+          </div>
+        </div>
+      `;
+
+      itemEl.addEventListener("dragstart", (e) => {
+        let plainText = (displayContent || "").trim();
+        const cardData = {
+          id: item.id,
+          title: displayTitle,
+          content: plainText,
+          timestamp: item.timestamp
+        };
+        e.dataTransfer.setData("application/x-bettergravity-card", JSON.stringify(cardData));
+        e.dataTransfer.setData("text/plain", plainText);
+        e.dataTransfer.effectAllowed = "copy";
+      });
+
+      itemEl.querySelector(".bg-card-content")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.currentTarget.classList.toggle("expanded");
+      });
+
+      itemEl.querySelector(".bg-recent-promote-btn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        promoteRecentToCard(item);
+        renderCardsPopoverContent();
+        showToast(`Saved "${displayTitle}" to Context Cards!`, "success");
+      });
+
+      itemEl.querySelector(".bg-card-branch-btn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        promoteToSporeBranch(item);
+      });
+
+      itemEl.querySelector(".bg-card-copy-btn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        navigator.clipboard?.writeText(displayContent);
+        showToast("Copied to clipboard", "success");
+      });
+
+      itemEl.querySelector(".bg-recent-del-btn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        recentBtw = recentBtw.filter((it) => it.id !== item.id);
+        saveRecentBtw(recentBtw);
+        renderCardsPopoverContent();
+        showToast("Staged record discarded", "info");
+      });
+
+      listEl.appendChild(itemEl);
+    });
+  }
+
+  function renderRecentFooter(container) {
+    const footerBar = container.querySelector("#bg-recent-footer-bar");
+    if (!footerBar) return;
+    const unpromotedCount = recentBtw.filter((it) => !it.isPromoted).length;
+    footerBar.innerHTML = `
+      <button type="button" class="bg-recent-clear-btn" ${unpromotedCount === 0 ? "disabled style='opacity:0.4;cursor:default;'" : ""} title="Clear unpromoted staged records">🗑️ Clear Stash (${unpromotedCount})</button>
+    `;
+
+    footerBar.querySelector(".bg-recent-clear-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const cleared = clearRecentStash();
+      if (cleared > 0) {
+        renderCardsPopoverContent();
+        showToast(`Cleared ${cleared} staged records`, "info");
+      }
     });
   }
 
@@ -3695,6 +4139,9 @@
       lastTrackedConvId = activeId;
       triggerRefresh();
     }
+    if (typeof harvestAndPersistSideQuestions === "function") {
+      harvestAndPersistSideQuestions();
+    }
   }, 300);
 
   let isStoreSubscribed = false;
@@ -3738,6 +4185,9 @@
     }
     if (typeof mountComposerCardsButton === "function") {
       mountComposerCardsButton();
+    }
+    if (typeof harvestAndPersistSideQuestions === "function") {
+      harvestAndPersistSideQuestions();
     }
     scheduleRefresh(250);
   });

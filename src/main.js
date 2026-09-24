@@ -38,6 +38,9 @@
       lastTrackedConvId = activeId;
       triggerRefresh();
     }
+    if (typeof harvestAndPersistSideQuestions === "function") {
+      harvestAndPersistSideQuestions();
+    }
   }, 300);
 
   let isStoreSubscribed = false;
@@ -81,6 +84,9 @@
     }
     if (typeof mountComposerCardsButton === "function") {
       mountComposerCardsButton();
+    }
+    if (typeof harvestAndPersistSideQuestions === "function") {
+      harvestAndPersistSideQuestions();
     }
     scheduleRefresh(250);
   });
