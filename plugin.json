@@ -1,0 +1,21 @@
+{
+  "name": "Timeslip",
+  "description": "Interactive conversation timeline & context cards for Antigravity.",
+  "version": "1.0.0",
+  "author": "RedPanda-Craft",
+  "main": "index.js",
+  "styles": "styles/timeline.css",
+  "source": "https://github.com/RedPanda-Craft/antigravity-timeslip",
+  "patches": [
+    {
+      "note": "Enhance Running status in conversation hover card with live elapsed time, step pace, and soft ETA",
+      "find": "name:\"check_circle\",size:14}),size:14})},q)",
+      "replace": [
+        {
+          "match": "(name:\"check_circle\",size:14\\}\\),size:14\\}\\)\\},)(q)(\\))",
+          "with": "$1globalThis.__bettergravityRenderStatus?globalThis.__bettergravityRenderStatus(z,e,q,a):$2$3"
+        }
+      ]
+    }
+  ]
+}
