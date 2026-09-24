@@ -1321,6 +1321,91 @@
 }
 
 /* ==========================================================================
+   Feature: Composer Cards Button & Gemini App Grid Compatibility
+   ========================================================================== */
+
+.bg-cards-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  margin: 0 2px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(203, 166, 247, 0.12);
+  border: 1px solid rgba(203, 166, 247, 0.28);
+  color: #cba6f7;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+  flex-shrink: 0;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.bg-cards-trigger-btn:hover {
+  background: rgba(203, 166, 247, 0.22);
+  border-color: rgba(203, 166, 247, 0.5);
+  transform: translateY(-0.5px);
+}
+
+.bg-cards-trigger-btn.bg-btn-active {
+  background: rgba(203, 166, 247, 0.32) !important;
+  border-color: #cba6f7 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(203, 166, 247, 0.35);
+}
+
+.bg-cards-trigger-btn .bg-sc-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.bg-cards-trigger-btn .bg-sc-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* Gemini App CSS Grid Compatibility:
+ * When Gemini App overrides [data-testid="agent-input-box"] with a CSS Grid,
+ * give .bg-cards-trigger-btn a dedicated first-class 'cards' grid-area next to 'plus'.
+ */
+[data-testid="agent-input-box"] .bg-cards-trigger-btn {
+  grid-area: cards !important;
+  align-self: end !important;
+  margin-bottom: 4px !important;
+}
+
+/* 1-Row Grid with Cards */
+[data-testid="agent-input-box"]:has(.bg-cards-trigger-btn) > .rounded-2xl.bg-card-border > .bg-card:not([data-mention-menu]) {
+  grid-template-columns: 32px auto minmax(0, 1fr) auto 32px 32px !important;
+  grid-template-areas: "plus cards text pill mic send" !important;
+}
+
+/* 2-Row Expanded Grid with Cards */
+[data-testid="agent-input-box"][data-expanded="true"]:has(.bg-cards-trigger-btn):not(:has([data-gemini-tool-chip])) > .rounded-2xl.bg-card-border > .bg-card:not([data-mention-menu]),
+[data-testid="agent-input-box"]:has([data-testid="input-attachment"]):has(.bg-cards-trigger-btn):not(:has([data-gemini-tool-chip])) > .rounded-2xl.bg-card-border > .bg-card:not([data-mention-menu]),
+[data-testid="agent-input-box"]:has(.border-b):has(.bg-cards-trigger-btn):not(:has([data-gemini-tool-chip])) > .rounded-2xl.bg-card-border > .bg-card:not([data-mention-menu]) {
+  grid-template-columns: 32px auto minmax(0, 1fr) auto 32px 32px !important;
+  grid-template-areas:
+    "text text text text text text"
+    "plus cards . pill mic send" !important;
+}
+
+/* 2-Row Expanded Grid with Cards and Gemini Tool Chip */
+[data-testid="agent-input-box"]:has([data-gemini-tool-chip]):has(.bg-cards-trigger-btn) > .rounded-2xl.bg-card-border > .bg-card:not([data-mention-menu]) {
+  grid-template-columns: 32px auto auto minmax(0, 1fr) auto 32px 32px !important;
+  grid-template-areas:
+    "text text text text text text text"
+    "plus cards chip . pill mic send" !important;
+}
+
+/* ==========================================================================
    Feature: Timeslip Cockpit Popup & TitleBar Button (Catppuccin Standards)
    ========================================================================== */
 

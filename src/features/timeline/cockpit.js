@@ -133,6 +133,16 @@
               <span class="bg-cockpit-switch-slider"></span>
             </button>
           </div>
+
+          <div class="bg-cockpit-toggle-row">
+            <div class="bg-cockpit-toggle-info">
+              <span class="bg-cockpit-toggle-title">Composer Cards</span>
+              <span class="bg-cockpit-toggle-desc">Cards shortcut in chat composer</span>
+            </div>
+            <button type="button" class="bg-cockpit-switch" id="bg-switch-composer-cards" role="switch" aria-checked="true">
+              <span class="bg-cockpit-switch-slider"></span>
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -187,6 +197,13 @@
       }
     });
 
+    wireSwitch("#bg-switch-composer-cards", "showComposerCards", (val) => {
+      window.__bettergravityShowComposerCards = val;
+      if (typeof setComposerCardsVisibility === "function") {
+        setComposerCardsVisibility(val);
+      }
+    });
+
     return pop;
   }
 
@@ -211,6 +228,7 @@
     setSwitch("#bg-switch-rail", pluginSettings.showRail !== false);
     setSwitch("#bg-switch-health", pluginSettings.showHealthPill !== false);
     setSwitch("#bg-switch-extract", pluginSettings.showExtractPill !== false);
+    setSwitch("#bg-switch-composer-cards", pluginSettings.showComposerCards !== false);
   }
 
   const TIMESLIP_ONBOARDING_KEY = "bettergravity:timeslip:onboarding_v1";

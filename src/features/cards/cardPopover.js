@@ -31,13 +31,26 @@
     if (anchorEl) {
       const rect = anchorEl.getBoundingClientRect();
       const popoverWidth = 320;
-      let left = rect.left - popoverWidth - 10;
+      let left = rect.left;
+      if (left + popoverWidth > window.innerWidth - 10) {
+        left = window.innerWidth - popoverWidth - 10;
+      }
       if (left < 10) left = 10;
-      let top = rect.top;
-      if (top + 460 > window.innerHeight) top = window.innerHeight - 470;
-      if (top < 10) top = 10;
+
+      let top;
+      if (rect.top > window.innerHeight / 2) {
+        // Lower half of screen (e.g. composer) -> pop above anchor
+        top = rect.top - 460 - 8;
+        if (top < 10) top = 10;
+      } else {
+        // Upper half of screen (e.g. titlebar or rail) -> pop below
+        top = rect.bottom + 8;
+        if (top + 460 > window.innerHeight) top = window.innerHeight - 470;
+      }
+
       cardsPopoverEl.style.left = `${left}px`;
       cardsPopoverEl.style.top = `${top}px`;
+      cardsPopoverEl.style.right = "auto";
     } else {
       cardsPopoverEl.style.right = "52px";
       cardsPopoverEl.style.top = "60px";
@@ -46,6 +59,7 @@
 
     requestAnimationFrame(() => {
       cardsPopoverEl.classList.add("is-open");
+      document.querySelectorAll(".bg-cards-trigger-btn").forEach((b) => b.classList.add("bg-btn-active"));
       const searchInput = cardsPopoverEl.querySelector(".bg-cards-search-input");
       if (searchInput) searchInput.focus();
     });
@@ -54,6 +68,7 @@
   function closeCardsPopover() {
     if (cardsPopoverEl) {
       cardsPopoverEl.classList.remove("is-open");
+      document.querySelectorAll(".bg-cards-trigger-btn").forEach((b) => b.classList.remove("bg-btn-active"));
     }
   }
 
@@ -378,3 +393,65 @@
       titleBar.appendChild(btn);
     }
   }
+
+  function isComposerCardsEnabled() {
+    return pluginSettings.showComposerCards !== false;
+  }
+
+  function setComposerCardsVisibility(visible) {
+    window.__bettergravityShowComposerCards = visible;
+    if (visible) {
+      mountComposerCardsButton();
+    } else {
+      unmountComposerCardsButton();
+    }
+  }
+
+  function mountComposerCardsButton() {
+    if (!isComposerCardsEnabled()) {
+      unmountComposerCardsButton();
+      return;
+    }
+
+    const box = document.querySelector('[data-testid="agent-input-box"]');
+    if (!box) return;
+
+    let btn = box.querySelector(".bg-cards-trigger-btn");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `bg-cards-trigger-btn ${isCardsPopoverOpen() ? "bg-btn-active" : ""}`;
+      btn.title = "Context Cards (Alt+C)";
+      btn.setAttribute("data-no-drag", "true");
+      btn.innerHTML = `
+        <span class="bg-sc-icon">🗂️</span>
+        <span class="bg-sc-label">Cards</span>
+      `;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleCardsPopover(btn);
+      });
+    }
+
+    const plusBtn = box.querySelector('button[aria-label="Add context"]');
+    if (plusBtn && plusBtn.parentElement) {
+      if (btn.previousElementSibling !== plusBtn || btn.parentElement !== plusBtn.parentElement) {
+        plusBtn.after(btn);
+      }
+    } else {
+      const targetParent =
+        box.querySelector('button[data-testid="model-selector-trigger"]')?.closest(".flex.min-w-0.flex-1") ||
+        box.querySelector(".flex.min-w-0.flex-1.items-center") ||
+        box.querySelector(".flex.w-full.items-center.justify-between") ||
+        box;
+      if (btn.parentElement !== targetParent) {
+        targetParent.appendChild(btn);
+      }
+    }
+  }
+
+  function unmountComposerCardsButton() {
+    document.querySelectorAll(".bg-cards-trigger-btn").forEach((b) => b.remove());
+  }
+

@@ -24,7 +24,8 @@
         autoJumpSmooth: true,
         showRail: true,
         showHealthPill: true,
-        showExtractPill: true
+        showExtractPill: true,
+        showComposerCards: true
       },
       saved || {}
     );

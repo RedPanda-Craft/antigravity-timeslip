@@ -79,6 +79,9 @@
     if (typeof hookComposerSubmit === "function") {
       hookComposerSubmit();
     }
+    if (typeof mountComposerCardsButton === "function") {
+      mountComposerCardsButton();
+    }
     scheduleRefresh(250);
   });
 
@@ -135,6 +138,9 @@
   if (typeof mountCockpitTitleBarButton === "function") {
     mountCockpitTitleBarButton();
   }
+  if (typeof mountComposerCardsButton === "function") {
+    mountComposerCardsButton();
+  }
 
   // --------------------------------------------------------------------------
   // Lifecycle Disposal
@@ -168,6 +174,9 @@
     document.getElementById("bg-timeslip-attached-slot")?.remove();
     document.getElementById("bg-timeline-toast-container")?.remove();
 
+    if (typeof unmountComposerCardsButton === "function") {
+      unmountComposerCardsButton();
+    }
     if (typeof unmountCockpit === "function") {
       unmountCockpit();
     }
