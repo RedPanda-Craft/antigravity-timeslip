@@ -1,21 +1,38 @@
-MIT License
+PolyForm Noncommercial License 1.0.0
+
+<https://polyformproject.org/licenses/noncommercial/1.0.0>
 
 Copyright (c) 2026 RedPanda-Craft
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## Grant
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Each contributor grants you a license to do everything with this software that would otherwise infringe that contributor's copyright in it, except for commercial purposes.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+## Noncommercial Purposes
+
+Any purpose is noncommercial if it is not primarily intended for or directed toward commercial advantage or monetary compensation.
+
+## Noncommercial Purpose Examples
+
+Examples of noncommercial purposes include personal use, education, research, and non-commercial development.
+
+## Commercial Purpose Examples
+
+Examples of commercial purposes include:
+
+*   sale, license, or distribution of this software for monetary compensation
+*   providing this software to others as a hosted service or API for monetary compensation
+*   internal use by businesses or other commercial entities
+*   incorporation into products or services that are sold or distributed for monetary compensation
+
+## Notices
+
+You must ensure that everyone who receives a copy of any part of this software from you also receives a copy of this license and all copyright and other notices of each contributor.
+
+## No Other Rights
+
+These terms do not grant you any patent licenses or any rights under trademark or other rights not explicitly granted.
+
+## Disclaimer
+
+To the extent permitted by applicable law, this software is provided as is, without any warranty of any kind, whether express or implied, including the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event will any contributor be liable to you for any damages, whether direct, indirect, special, incidental, or consequential, arising under or in connection with this software, even if that contributor has been advised of the possibility of those damages.
