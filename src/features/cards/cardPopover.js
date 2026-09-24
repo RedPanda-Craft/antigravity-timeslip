@@ -64,6 +64,7 @@
       document.querySelectorAll(".bg-cards-trigger-btn").forEach((b) => b.classList.add("bg-btn-active"));
       const searchInput = cardsPopoverEl.querySelector(".bg-cards-search-input");
       if (searchInput) searchInput.focus();
+      attachComposerDropTarget();
     });
   }
 
@@ -103,7 +104,7 @@
       <div class="bg-cards-list-container" id="bg-cards-list-container"></div>
       <div class="bg-recent-footer-bar" id="bg-recent-footer-bar" style="display:none;"></div>
       <div class="bg-cards-popover-footer" id="bg-cards-popover-footer">
-        <span class="bg-cards-tip">Click 📌 to pin · Click 📎 to attach to prompt</span>
+        <span class="bg-cards-tip">Drag any card directly into chat · Click 📌 to pin</span>
       </div>
     `;
 
@@ -419,41 +420,105 @@
   // Drag & Drop Card Text Directly into Chat Composer
   // --------------------------------------------------------------------------
 
-  function insertTextIntoComposer(text) {
+  async function insertTextIntoComposer(text) {
     if (!text) return false;
     const box = document.querySelector('[data-testid="agent-input-box"]');
     if (!box) return false;
 
-    const editor =
-      box.querySelector('[contenteditable="true"]') ||
-      box.querySelector("textarea") ||
-      box;
+    // Locate the editable node (Lexical or textarea)
+    let root = null;
+    for (const node of box.querySelectorAll("[contenteditable]")) {
+      if (!node.isContentEditable) continue;
+      if (node.__lexicalEditor) {
+        root = node;
+        break;
+      }
+      root = root || node;
+    }
+    if (!root) {
+      root = box.querySelector("textarea") || box.querySelector('[contenteditable="true"]') || box;
+    }
 
-    editor.focus();
-
-    if (editor instanceof HTMLTextAreaElement || editor instanceof HTMLInputElement) {
-      const start = editor.selectionStart ?? editor.value.length;
-      const end = editor.selectionEnd ?? editor.value.length;
-      const existing = editor.value;
+    // 1. Textarea or Input field
+    if (root instanceof HTMLTextAreaElement || root instanceof HTMLInputElement) {
+      root.focus();
+      const start = root.selectionStart ?? root.value.length;
+      const end = root.selectionEnd ?? root.value.length;
+      const existing = root.value;
       const toInsert = existing.trim() ? `\n\n${text}` : text;
-      editor.setRangeText(toInsert, start, end, "end");
-      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      root.setRangeText(toInsert, start, end, "end");
+      root.dispatchEvent(new Event("input", { bubbles: true }));
+      showToast("Card text copied to prompt", "success");
       return true;
     }
 
-    // Lexical / contenteditable editor
+    // 2. Lexical Editor
+    const editor = root.__lexicalEditor;
+    if (editor && typeof editor.focus === "function") {
+      editor.focus();
+    } else {
+      root.focus();
+    }
+
+    // Place caret at the end
     const sel = window.getSelection();
-    if (!sel || !editor.contains(sel.anchorNode)) {
+    if (!sel || !root.contains(sel.anchorNode)) {
       const range = document.createRange();
-      range.selectNodeContents(editor);
+      range.selectNodeContents(root);
       range.collapse(false);
       sel?.removeAllRanges();
       sel?.addRange(range);
     }
 
-    const existingText = (editor.textContent || "").trim();
+    const existingText = (root.textContent || "").trim();
     const toInsert = existingText ? `\n\n${text}` : text;
-    document.execCommand("insertText", false, toInsert);
+    const initialLen = (root.textContent || "").length;
+
+    // Strategy 1: Native clipboard paste via execCommand (most reliable in Electron/Lexical)
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(toInsert);
+        document.execCommand("paste");
+      }
+    } catch (_) {}
+
+    // Strategy 2: Synthetic ClipboardEvent if text didn't update
+    if ((root.textContent || "").length === initialLen) {
+      try {
+        const dt = new DataTransfer();
+        dt.setData("text/plain", toInsert);
+        const pasteEvt = new ClipboardEvent("paste", {
+          bubbles: true,
+          cancelable: true,
+          clipboardData: dt
+        });
+        root.dispatchEvent(pasteEvt);
+      } catch (_) {}
+    }
+
+    // Strategy 3: Multiline insertText line by line if still not updated
+    if ((root.textContent || "").length === initialLen) {
+      try {
+        const lines = toInsert.split("\n");
+        for (let i = 0; i < lines.length; i++) {
+          if (i > 0) {
+            document.execCommand("insertParagraph", false, null);
+          }
+          if (lines[i].length > 0) {
+            document.execCommand("insertText", false, lines[i]);
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Strategy 4: Fallback single line insertText
+    if ((root.textContent || "").length === initialLen) {
+      try {
+        document.execCommand("insertText", false, toInsert.replace(/\n+/g, " "));
+      } catch (_) {}
+    }
+
+    showToast("Card text copied to prompt", "success");
     return true;
   }
 
@@ -506,14 +571,16 @@
         if (!textToInsert) {
           textToInsert = (e.dataTransfer.getData("text/plain") || "").trim();
         }
-        if (!textToInsert) return;
 
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
 
-        insertTextIntoComposer(textToInsert);
-        showToast("Card text copied to prompt", "success");
+        if (!textToInsert) return;
+
+        setTimeout(() => {
+          insertTextIntoComposer(textToInsert);
+        }, 30);
       },
       true
     );
