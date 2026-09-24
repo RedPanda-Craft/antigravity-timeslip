@@ -1,5 +1,7 @@
 # Timeslip ⏱️
 
+<img width="1031" height="336" alt="image" src="https://github.com/user-attachments/assets/8336832c-51d6-4e44-939f-4ae88d695bc4" />
+
 > **Don't lose the thread. Pin it.**  
 > *Interactive conversation timeline, branch navigation, trajectory extractor & context cards for Google Antigravity 2.0.*
 
