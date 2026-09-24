@@ -1,17 +1,24 @@
 # Timeslip ⏱️
 
-<img width="1031" height="336" alt="image" src="https://github.com/user-attachments/assets/8336832c-51d6-4e44-939f-4ae88d695bc4" />
+<p align="center">
+  <img src="docs/assets/hero_title_card.png" width="560" alt="Don't lose the thread. Pin it." />
+</p>
 
-> **Don't lose the thread. Pin it.**  
-> *Interactive conversation timeline, branch navigation, trajectory extractor & context cards for Google Antigravity 2.0.*
+<p align="center">
+  <em>Interactive conversation timeline, branch navigation, trajectory extractor &amp; context cards for Google Antigravity 2.0.</em>
+</p>
 
-![Timeslip Official Master Banner](timeslip_banner.png)
+<p align="center">
+  <img src="timeslip_banner.png" width="100%" alt="Timeslip Official Master Banner" />
+</p>
 
-[![Antigravity](https://img.shields.io/badge/Antigravity-2.0%2B-blue.svg)](https://deepmind.google/technologies/gemini/)
-[![BetterGravity](https://img.shields.io/badge/BetterGravity-Compatible-orange.svg)](https://github.com/YashjitPal/BetterGravity)
-[![Author](https://img.shields.io/badge/Author-RedPanda--Craft-purple.svg)](https://github.com/RedPanda-Craft)
-[![Version](https://img.shields.io/badge/Version-1.0.0-green.svg)](https://github.com/RedPanda-Craft/antigravity-timeslip)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<p align="center">
+  <a href="https://deepmind.google/technologies/gemini/"><img src="https://img.shields.io/badge/Antigravity-2.0%2B-blue.svg" alt="Antigravity" /></a>
+  <a href="https://github.com/YashjitPal/BetterGravity"><img src="https://img.shields.io/badge/BetterGravity-Compatible-orange.svg" alt="BetterGravity" /></a>
+  <a href="https://github.com/RedPanda-Craft"><img src="https://img.shields.io/badge/Author-RedPanda--Craft-purple.svg" alt="Author" /></a>
+  <a href="https://github.com/RedPanda-Craft/antigravity-timeslip"><img src="https://img.shields.io/badge/Version-1.0.0-green.svg" alt="Version" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+</p>
 
 ---
 
@@ -31,17 +38,29 @@ Long conversational programming trajectories with AI agents often result in seve
 ## 🎯 Key Pillars
 
 ### 1. ⏱️ Trajectory Navigation (Timeline Rail)
+
+<p align="center">
+  <img src="docs/assets/feature_navigation.png" width="100%" alt="Feature 1 - Trajectory Navigation" />
+</p>
 - **Bidirectional Scroll-Spy**: The active turn node illuminates automatically as you scroll through long conversations.
 - **Context Health Tiers**: Color-coded turn pacing indicators (Green `< 9` turns, Yellow `< 19`, Orange `< 36`, Red `36+`).
 - **Titlebar Telemetry Capsule**: Real-time header pill (`● 18 turns · 0 comp · 4C`) tracking turn depth, compaction events, and chunk payload scale.
 - **Smart Virtual Relay Jump**: Deep jumps directly to TanStack virtualized turns with closed-loop convergence verification and gesture-cancel locks.
 
 ### 2. 🗂️ Context Cards Vault
+
+<p align="center">
+  <img src="docs/assets/feature_cards.png" width="100%" alt="Feature 2 - Context Cards Vault" />
+</p>
 - **One-Pin Capture**: Instantly pin side queries, architectural notes, and prompt fragments.
 - **React Fiber Hook Injection**: Seamlessly prepends saved card context into your active chat composer.
 - **Tags & Search**: Search and filter cards by tags (`#context`, `#architecture`, `#prompt`).
 
 ### 3. 📥 Surgical Trajectory Extractor
+
+<p align="center">
+  <img src="docs/assets/feature_extractor.png" width="100%" alt="Feature 3 - Trajectory Extractor" />
+</p>
 - **Turn Multi-Select**: Cherry-pick specific turn ranges or toggle entire conversations.
 - **Granular Filter Toggles**: Toggle User queries, Assistant responses, Code blocks, Thinking traces, or Tool executions.
 - **Multi-Target Export**: Export publication-grade Markdown files, structured JSON datasets, or elevate selected turns directly into Context Cards.

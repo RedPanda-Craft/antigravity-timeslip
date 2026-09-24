@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 180" width="100%" height="auto">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#bac2de" />
+    </linearGradient>
+  </defs>
+  <style>
+    .hero-text {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+    }
+  </style>
+  <text x="450" y="65" class="hero-text" font-size="64" fill="#ffffff" text-anchor="middle">Don't lose the thread.</text>
+  <text x="450" y="145" class="hero-text" font-size="64" fill="url(#grad)" text-anchor="middle">Pin it.</text>
+</svg>
