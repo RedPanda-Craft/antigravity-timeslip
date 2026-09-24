@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "author": "RedPanda-Craft",
   "main": "index.js",
-  "styles": "styles/timeline.css",
+  "styles": [
+    "styles/timeline.css"
+  ],
   "source": "https://github.com/RedPanda-Craft/antigravity-timeslip"
 }
