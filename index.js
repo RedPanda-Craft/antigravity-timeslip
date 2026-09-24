@@ -3325,10 +3325,34 @@
       timestamp: item.timestamp || Date.now()
     };
 
-    addCard(item.content, item.title, originMeta, ["btw"]);
-
+    const newCard = addCard(item.content, item.title, originMeta, ["btw"]);
+    item.promotedCardId = newCard ? newCard.id : null;
     item.isPromoted = true;
     saveRecentBtw(recentBtw);
+    if (typeof updateCardsPopoverCounts === "function") {
+      updateCardsPopoverCounts();
+    }
+  }
+
+  function unpromoteRecentCard(item) {
+    if (!item || !item.isPromoted) return;
+
+    const targetCardId = item.promotedCardId;
+    if (targetCardId) {
+      timeslipCards = timeslipCards.filter((c) => c.id !== targetCardId);
+    } else {
+      timeslipCards = timeslipCards.filter((c) => {
+        const contentMatch = (c.content || "").trim() === (item.content || "").trim();
+        const titleMatch = c.title === item.title;
+        return !(contentMatch && titleMatch);
+      });
+    }
+    saveCards(timeslipCards);
+
+    item.isPromoted = false;
+    delete item.promotedCardId;
+    saveRecentBtw(recentBtw);
+
     if (typeof updateCardsPopoverCounts === "function") {
       updateCardsPopoverCounts();
     }
@@ -3343,66 +3367,6 @@
       updateCardsPopoverCounts();
     }
     return unpromotedCount;
-  }
-
-  function assembleDistilledContext(item) {
-    const title = item.title || "Side Discussion";
-    const sideContent = (item.content || "").trim();
-    const sideQuestion = item.question || "";
-    const parentId = item.conversationId || getCurrentConversationId();
-
-    const parts = [
-      `[💡 Spore Branch from Main Thread]`,
-      `- Parent Thread: ${parentId || "Current Workspace"}`,
-      `- Core Topic: ${title}`
-    ];
-
-    if (sideQuestion) {
-      parts.push(`- Anchor Question: ${sideQuestion}`);
-    }
-
-    parts.push(
-      `\n[Side Discussion Notes]`,
-      sideContent,
-      `\n---\nPlease proceed with deeper exploration and implementation based on the above findings:`
-    );
-
-    return parts.join("\n");
-  }
-
-  async function promoteToSporeBranch(item) {
-    const branchTree = globalThis.__bettergravityBranchTree;
-    if (!branchTree || typeof branchTree.createSporeBranch !== "function") {
-      showToast("Branch tree module not ready, please retry later", "error");
-      return;
-    }
-
-    const parentId = item.conversationId || getCurrentConversationId();
-    if (!parentId) {
-      showToast("Cannot resolve parent conversation ID", "error");
-      return;
-    }
-
-    const title = item.title || "💡 Spore Branch";
-    const distilledPrompt = assembleDistilledContext(item);
-    const originAnchor = item.question || item.title || "";
-
-    showToast("Elevating to branch session...", "info");
-    if (typeof closeCardsPopover === "function") {
-      closeCardsPopover();
-    }
-
-    const forkedId = await branchTree.createSporeBranch({
-      parentId,
-      title,
-      distilledPrompt,
-      originAnchor,
-      originTurnIndex: 0
-    });
-
-    if (forkedId) {
-      showToast("Successfully elevated to branch session!", "success");
-    }
   }
 
   function harvestAndPersistSideQuestions() {
@@ -3687,7 +3651,6 @@
             <button type="button" class="bg-card-action-btn bg-card-attach-btn ${isAttached ? "is-attached" : ""}" title="${isAttached ? "Attached to prompt" : "Attach to prompt"}">
               ${isAttached ? "✓" : "📎"}
             </button>
-            <button type="button" class="bg-card-action-btn bg-card-branch-btn" title="Elevate to branch session">🔀 Branch</button>
             <button type="button" class="bg-card-action-btn bg-card-copy-btn" title="Copy Content">📋 Copy</button>
             <button type="button" class="bg-card-action-btn bg-card-del-btn" title="Delete Card">🗑️</button>
           </div>
@@ -3714,11 +3677,6 @@
           attachCardToComposer(card);
         }
         renderCardsPopoverContent();
-      });
-
-      cardEl.querySelector(".bg-card-branch-btn")?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        promoteToSporeBranch(card);
       });
 
       cardEl.querySelector(".bg-card-copy-btn")?.addEventListener("click", (e) => {
@@ -3785,12 +3743,9 @@
             }
           </div>
           <div class="bg-card-actions">
-            ${
-              item.isPromoted
-                ? `<button type="button" class="bg-card-action-btn bg-recent-promoted-btn" disabled title="Saved to Context Cards">⭐ Faved</button>`
-                : `<button type="button" class="bg-card-action-btn bg-recent-promote-btn" title="Save to permanent Context Cards">⭐ Fav</button>`
-            }
-            <button type="button" class="bg-card-action-btn bg-card-branch-btn" title="Elevate to branch session (with condensed context)">🔀 Branch</button>
+            <button type="button" class="bg-card-action-btn ${item.isPromoted ? 'bg-recent-promoted-btn' : 'bg-recent-promote-btn'}" title="${item.isPromoted ? 'Click to cancel favorite (Un-fav)' : 'Save to permanent Context Cards'}">
+              ${item.isPromoted ? '⭐ Faved' : '☆ Fav'}
+            </button>
             <button type="button" class="bg-card-action-btn bg-card-copy-btn" title="Copy text to clipboard">📋 Copy</button>
             <button type="button" class="bg-card-del-btn bg-recent-del-btn" title="Discard this staged note">🗑️</button>
           </div>
@@ -3815,16 +3770,18 @@
         e.currentTarget.classList.toggle("expanded");
       });
 
-      itemEl.querySelector(".bg-recent-promote-btn")?.addEventListener("click", (e) => {
+      const favBtn = itemEl.querySelector(".bg-recent-promoted-btn, .bg-recent-promote-btn");
+      favBtn?.addEventListener("click", (e) => {
         e.stopPropagation();
-        promoteRecentToCard(item);
-        renderCardsPopoverContent();
-        showToast(`Saved "${displayTitle}" to Context Cards!`, "success");
-      });
-
-      itemEl.querySelector(".bg-card-branch-btn")?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        promoteToSporeBranch(item);
+        if (item.isPromoted) {
+          unpromoteRecentCard(item);
+          renderCardsPopoverContent();
+          showToast(`Removed "${displayTitle}" from Context Cards`, "info");
+        } else {
+          promoteRecentToCard(item);
+          renderCardsPopoverContent();
+          showToast(`Saved "${displayTitle}" to Context Cards!`, "success");
+        }
       });
 
       itemEl.querySelector(".bg-card-copy-btn")?.addEventListener("click", (e) => {

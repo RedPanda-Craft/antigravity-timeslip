@@ -1424,7 +1424,14 @@
   color: #a6e3a1 !important;
   border-color: rgba(166, 227, 161, 0.3) !important;
   background: rgba(166, 227, 161, 0.08) !important;
-  cursor: default !important;
+  cursor: pointer !important;
+  transition: all 120ms ease !important;
+}
+
+.bg-recent-promoted-btn:hover {
+  background: rgba(243, 139, 168, 0.16) !important;
+  border-color: rgba(243, 139, 168, 0.45) !important;
+  color: #f38ba8 !important;
 }
 
 .bg-recent-footer-bar {
@@ -1451,19 +1458,6 @@
 .bg-recent-clear-btn:hover:not(:disabled) {
   background: rgba(243, 139, 168, 0.2);
   color: #ffffff;
-}
-
-.bg-card-branch-btn {
-  color: #cba6f7 !important;
-  border-color: rgba(203, 166, 247, 0.35) !important;
-  background: rgba(203, 166, 247, 0.08) !important;
-  transition: all 120ms ease !important;
-}
-
-.bg-card-branch-btn:hover {
-  background: rgba(203, 166, 247, 0.22) !important;
-  border-color: rgba(203, 166, 247, 0.55) !important;
-  color: #ffffff !important;
 }
 
 .bg-card-content {

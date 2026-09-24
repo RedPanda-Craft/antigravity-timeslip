@@ -246,7 +246,6 @@
             <button type="button" class="bg-card-action-btn bg-card-attach-btn ${isAttached ? "is-attached" : ""}" title="${isAttached ? "Attached to prompt" : "Attach to prompt"}">
               ${isAttached ? "✓" : "📎"}
             </button>
-            <button type="button" class="bg-card-action-btn bg-card-branch-btn" title="Elevate to branch session">🔀 Branch</button>
             <button type="button" class="bg-card-action-btn bg-card-copy-btn" title="Copy Content">📋 Copy</button>
             <button type="button" class="bg-card-action-btn bg-card-del-btn" title="Delete Card">🗑️</button>
           </div>
@@ -273,11 +272,6 @@
           attachCardToComposer(card);
         }
         renderCardsPopoverContent();
-      });
-
-      cardEl.querySelector(".bg-card-branch-btn")?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        promoteToSporeBranch(card);
       });
 
       cardEl.querySelector(".bg-card-copy-btn")?.addEventListener("click", (e) => {
@@ -344,12 +338,9 @@
             }
           </div>
           <div class="bg-card-actions">
-            ${
-              item.isPromoted
-                ? `<button type="button" class="bg-card-action-btn bg-recent-promoted-btn" disabled title="Saved to Context Cards">⭐ Faved</button>`
-                : `<button type="button" class="bg-card-action-btn bg-recent-promote-btn" title="Save to permanent Context Cards">⭐ Fav</button>`
-            }
-            <button type="button" class="bg-card-action-btn bg-card-branch-btn" title="Elevate to branch session (with condensed context)">🔀 Branch</button>
+            <button type="button" class="bg-card-action-btn ${item.isPromoted ? 'bg-recent-promoted-btn' : 'bg-recent-promote-btn'}" title="${item.isPromoted ? 'Click to cancel favorite (Un-fav)' : 'Save to permanent Context Cards'}">
+              ${item.isPromoted ? '⭐ Faved' : '☆ Fav'}
+            </button>
             <button type="button" class="bg-card-action-btn bg-card-copy-btn" title="Copy text to clipboard">📋 Copy</button>
             <button type="button" class="bg-card-del-btn bg-recent-del-btn" title="Discard this staged note">🗑️</button>
           </div>
@@ -374,16 +365,18 @@
         e.currentTarget.classList.toggle("expanded");
       });
 
-      itemEl.querySelector(".bg-recent-promote-btn")?.addEventListener("click", (e) => {
+      const favBtn = itemEl.querySelector(".bg-recent-promoted-btn, .bg-recent-promote-btn");
+      favBtn?.addEventListener("click", (e) => {
         e.stopPropagation();
-        promoteRecentToCard(item);
-        renderCardsPopoverContent();
-        showToast(`Saved "${displayTitle}" to Context Cards!`, "success");
-      });
-
-      itemEl.querySelector(".bg-card-branch-btn")?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        promoteToSporeBranch(item);
+        if (item.isPromoted) {
+          unpromoteRecentCard(item);
+          renderCardsPopoverContent();
+          showToast(`Removed "${displayTitle}" from Context Cards`, "info");
+        } else {
+          promoteRecentToCard(item);
+          renderCardsPopoverContent();
+          showToast(`Saved "${displayTitle}" to Context Cards!`, "success");
+        }
       });
 
       itemEl.querySelector(".bg-card-copy-btn")?.addEventListener("click", (e) => {
