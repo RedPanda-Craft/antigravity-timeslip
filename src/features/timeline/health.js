@@ -75,8 +75,26 @@
       pill.id = "bg-header-health-pill";
       pill.className = "bg-header-health-pill";
       pill.setAttribute("data-no-drag", "");
-      pill.setAttribute("role", "status");
-      pill.title = "Conversation Telemetry: Turns · Compactions · Chunks";
+      pill.setAttribute("role", "button");
+      pill.setAttribute("tabindex", "0");
+      pill.style.cursor = "pointer";
+      pill.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const hud = document.getElementById("bg-timeline-hud");
+        if (hud) {
+          hud.style.display = hud.style.display === "none" ? "" : "none";
+        }
+      });
+      pill.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.stopPropagation();
+          e.preventDefault();
+          const hud = document.getElementById("bg-timeline-hud");
+          if (hud) {
+            hud.style.display = hud.style.display === "none" ? "" : "none";
+          }
+        }
+      });
     }
 
     const petBtn =

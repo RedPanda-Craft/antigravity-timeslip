@@ -102,83 +102,10 @@
 .bg-pill-red .bg-header-pill-dot {
   background: #ef4444;
   box-shadow: 0 0 8px #ef4444;
-  animation: bg-gauge-pulse 1.8s infinite;
+  animation: bg-pill-pulse 1.8s infinite;
 }
 
-/* Top Health Gas Gauge Pill */
-.bg-timeline-gauge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  background-color: rgba(22, 22, 30, 0.96);
-  user-select: none;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
-  margin-bottom: 8px;
-  flex-shrink: 0;
-}
-
-.bg-timeline-gauge:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
-}
-
-.bg-timeline-gauge-dot {
-  width: 7px;
-  height: 7px;
-  min-width: 7px;
-  border-radius: 50%;
-  transition: background-color 200ms ease;
-}
-
-/* Gauge Color Tiers */
-.bg-gauge-green {
-  background: rgba(16, 185, 129, 0.16);
-  border: 1px solid rgba(16, 185, 129, 0.38);
-  color: #6ee7b7;
-}
-.bg-gauge-green .bg-timeline-gauge-dot {
-  background: #10b981;
-  box-shadow: 0 0 6px #10b981;
-}
-
-.bg-gauge-yellow {
-  background: rgba(245, 158, 11, 0.18);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: #fde68a;
-}
-.bg-gauge-yellow .bg-timeline-gauge-dot {
-  background: #f59e0b;
-  box-shadow: 0 0 6px #f59e0b;
-}
-
-.bg-gauge-orange {
-  background: rgba(249, 115, 22, 0.2);
-  border: 1px solid rgba(249, 115, 22, 0.45);
-  color: #fed7aa;
-}
-.bg-gauge-orange .bg-timeline-gauge-dot {
-  background: #f97316;
-  box-shadow: 0 0 8px #f97316;
-}
-
-.bg-gauge-red {
-  background: rgba(239, 68, 68, 0.22);
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  color: #fca5a5;
-}
-.bg-gauge-red .bg-timeline-gauge-dot {
-  background: #ef4444;
-  box-shadow: 0 0 10px #ef4444;
-  animation: bg-gauge-pulse 1.8s infinite;
-}
-
-@keyframes bg-gauge-pulse {
+@keyframes bg-pill-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.6; transform: scale(0.85); }
 }
@@ -191,7 +118,7 @@
   gap: 3px;
   padding: 8px 4px;
   border-radius: 12px;
-  /* 折叠态：完全透明、无毛玻璃、无阴影，仅保留 1px 透明占位边框防止几何突跳 */
+  /* Collapsed state: transparent, no glass, no shadow, 1px transparent placeholder border */
   background: transparent !important;
   background-color: transparent !important;
   backdrop-filter: none !important;
@@ -205,7 +132,7 @@
   width: 26px;
   box-sizing: border-box;
   position: relative;
-  /* 离场秒退：鼠标移出时立即缩回，0s 延迟，瞬间回归纯透明无框 */
+  /* Rapid collapse on mouse leave: 0s delay */
   transition: width 180ms cubic-bezier(0.16, 1, 0.3, 1) 0s,
               padding 180ms ease 0s,
               background-color 160ms ease 0s,
@@ -217,7 +144,7 @@
   display: none;
 }
 
-/* 1. 悬停慢进：光标停留超过 0.28s 阻尼阈值才顺滑展开为 260px，100% 豁免无效掠过 */
+/* 1. Slow expansion on hover: 0.28s damping delay to 260px */
 .bg-timeline-rail:hover {
   width: 260px;
   padding: 8px 6px;
@@ -225,7 +152,7 @@
   background-color: rgba(22, 22, 30, 0.98) !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
-  /* 进场防误触：挂载 0.28s 等待延迟 */
+  /* Hover enter: 0.28s wait delay */
   transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1) 0.28s,
               padding 200ms ease 0.28s,
               background-color 180ms ease 0.28s,
@@ -233,24 +160,8 @@
               box-shadow 200ms ease 0.28s;
 }
 
-/* 顶部胶囊主动点击固化展开：立即展开，0s 延迟 */
-.bg-timeline-rail.bg-expanded {
-  width: 260px;
-  padding: 8px 6px;
-  background: rgba(22, 22, 30, 0.98) !important;
-  background-color: rgba(22, 22, 30, 0.98) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
-  transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1) 0s,
-              padding 200ms ease 0s,
-              background-color 180ms ease 0s,
-              border-color 180ms ease 0s,
-              box-shadow 200ms ease 0s;
-}
-
-/* 方案 2 协同防护：展开状态下的隐形外延防护带（防止斜向滑动时微弱出圈） */
-.bg-timeline-rail:hover::before,
-.bg-timeline-rail.bg-expanded::before {
+/* Safety hit-box during hover expansion */
+.bg-timeline-rail:hover::before {
   content: "";
   position: absolute;
   left: -24px;
@@ -260,7 +171,7 @@
   pointer-events: auto;
 }
 
-/* 2. 关键：每节点 height 严格锁死为 36px（折叠/展开、各节点是否 hover，绝不改变任何元素尺寸与位置） */
+/* 2. Standard node height locked to 36px */
 .bg-timeline-node {
   height: 36px;
   min-height: 36px;
@@ -277,17 +188,17 @@
   flex-shrink: 0;
 }
 
-/* 节点内部子元素穿透：严禁子元素产生独立鼠标事件竞争，消除光标抖动（AGENTS.md 规范） */
+/* Pointer events pass-through for children to prevent jitter (AGENTS.md) */
 .bg-timeline-node * {
   pointer-events: none;
 }
 
-.bg-timeline-rail:not(:hover):not(.bg-expanded) .bg-timeline-node:not(.bg-node-active):not(:hover) {
+.bg-timeline-rail:not(:hover) .bg-timeline-node:not(.bg-node-active):not(:hover) {
   background: transparent !important;
   background-color: transparent !important;
 }
 
-/* 激活节点准星指示器（通过 ::before 实现胶囊解耦：折叠态向右对齐圆点中心，展开态舒展为整行卡片） */
+/* Active indicator ::before capsule */
 .bg-timeline-node.bg-node-active {
   background: transparent !important;
   position: relative;
@@ -307,7 +218,7 @@
   transition: left 180ms ease 0s, right 180ms ease 0s, background-color 160ms ease 0s;
 }
 
-/* 节点 hover：微弱提亮胶囊（不改高度、不改变任何元素尺寸与位置） */
+/* Node hover highlight */
 .bg-timeline-node:hover {
   background: rgba(255, 255, 255, 0.10) !important;
   border-radius: 8px;
@@ -352,8 +263,8 @@
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 0 8px currentColor;
 }
 
-/* 激活节点在展开态下贴合整行卡片 */
-.bg-timeline-rail:is(:hover, .bg-expanded) .bg-timeline-node.bg-node-active::before {
+/* Active node highlight matches card row in expanded state */
+.bg-timeline-rail:hover .bg-timeline-node.bg-node-active::before {
   left: 2px;
   right: 2px;
   background: rgba(255, 255, 255, 0.10) !important;
@@ -362,7 +273,7 @@
               background-color 180ms ease 0.28s;
 }
 
-/* 3. 抽屉内各节点卡片详情：在展开为 260px 时全部列出，文本严格单行截断，高度锁定 */
+/* 3. Drawer card details on expansion: single-line truncation, locked height */
 .bg-turn-details,
 .bg-timeline-card {
   display: flex;
@@ -375,26 +286,17 @@
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  /* 离场秒隐退：0s 延迟 */
+  /* Rapid exit: 0s delay */
   transition: opacity 120ms ease 0s, visibility 120ms 0s;
 }
 
-/* 悬停慢进：卡片文本随抽屉展开等待 0.28s 阻尼浮现 */
+/* Smooth card text reveal on 0.28s hover damping */
 .bg-timeline-rail:hover .bg-turn-details,
 .bg-timeline-rail:hover .bg-timeline-card {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transition: opacity 160ms ease 0.28s, visibility 160ms 0.28s;
-}
-
-/* 固化展开：立即呈现 */
-.bg-timeline-rail.bg-expanded .bg-turn-details,
-.bg-timeline-rail.bg-expanded .bg-timeline-card {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transition: opacity 160ms ease 0s, visibility 160ms 0s;
 }
 
 .bg-timeline-card-header {
@@ -568,7 +470,7 @@
   scroll-margin-top: 60px;
 }
 
-/* 独立 GPU 合成发光层：预置与打字框 100% 相同的高级双层微羽化内发光（4px 骨架 + 18px 漫反射柔光） */
+/* Independent GPU synthetic glow layer: dual-layer feathering (4px skeleton + 18px soft diffuse) */
 .bg-step-jump-bubble::after,
 .bg-step-jump-warmth::after,
 .bg-step-jump-fading::after {
@@ -584,7 +486,7 @@
   will-change: opacity;
 }
 
-/* 跳转着陆呼吸动画（1.8s 纯 GPU Opacity 调度，零重复光栅化，终点平滑锁定 30% 温润余温） */
+/* Landing breath animation: 1.8s GPU opacity schedule, settles at 30% residual warmth */
 .bg-step-jump-bubble::after {
   animation: bg-jump-breathe 1.8s cubic-bezier(0.2, 0.8, 0.25, 1) forwards !important;
 }
@@ -601,13 +503,13 @@
   }
 }
 
-/* 单目标独占静止余温（动画结束后平滑承接，与打字框余温 100% 视觉一致） */
+/* Stationary residual warmth: matches composer warmth visual level */
 .bg-step-jump-warmth::after {
   opacity: 0.30 !important;
   transition: opacity 260ms cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-/* 离场淡出状态：新跳转或新消息输入时优雅淡出，杜绝突变消失 */
+/* Fading state: smooth fade-out on new jump or input */
 .bg-step-jump-fading::after {
   opacity: 0 !important;
   transition: opacity 260ms cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -1070,13 +972,29 @@
   color: #fab387;
 }
 
-.bg-cards-count-badge {
-  font-size: 10px;
-  background: rgba(250, 179, 135, 0.2);
-  color: #fab387;
-  padding: 1px 6px;
-  border-radius: 999px;
-  border: 1px solid rgba(250, 179, 135, 0.3);
+.bg-cards-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bg-popover-add-btn {
+  background: rgba(203, 166, 247, 0.12);
+  border: 1px solid rgba(203, 166, 247, 0.3);
+  color: #cba6f7;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 120ms ease;
+  line-height: 1.4;
+}
+
+.bg-popover-add-btn:hover {
+  background: rgba(203, 166, 247, 0.25);
+  border-color: #cba6f7;
+  color: #ffffff;
 }
 
 .bg-cards-close-btn {
@@ -1092,6 +1010,96 @@
 .bg-cards-close-btn:hover {
   color: #f38ba8;
   background: rgba(255, 255, 255, 0.08);
+}
+
+.bg-card-form-container {
+  padding: 0 12px;
+}
+
+.bg-card-form {
+  background: #11111b;
+  border: 1px solid rgba(203, 166, 247, 0.35);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: bg-overlay-in 140ms ease;
+}
+
+.bg-card-form-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #cba6f7;
+  margin-bottom: 2px;
+}
+
+.bg-card-form input,
+.bg-card-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: #181825;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  padding: 5px 8px;
+  color: #cdd6f4;
+  font-size: 11px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.bg-card-form input:focus,
+.bg-card-form textarea:focus {
+  border-color: #cba6f7;
+}
+
+.bg-card-form textarea {
+  resize: vertical;
+  min-height: 56px;
+  max-height: 160px;
+  line-height: 1.4;
+}
+
+.bg-card-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.bg-card-form-save {
+  background: #cba6f7;
+  color: #11111b;
+  border: none;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.bg-card-form-save:hover {
+  opacity: 0.9;
+}
+
+.bg-card-form-cancel {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #a6adc8;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.bg-card-form-cancel:hover {
+  color: #cdd6f4;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .bg-cards-search-box {
@@ -1162,17 +1170,20 @@
 }
 
 .bg-card-node-item {
-  background: rgba(17, 17, 27, 0.7);
+  background: #1e1e2e;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   padding: 8px 10px;
-  cursor: default;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 .bg-card-node-item:hover {
   background: rgba(30, 30, 46, 0.85);
-  border-color: rgba(250, 179, 135, 0.35);
+  border-color: rgba(203, 166, 247, 0.35);
 }
 
 .bg-card-node-item.is-pinned {
@@ -1184,54 +1195,135 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+}
+
+.bg-card-node-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  max-width: 200px;
 }
 
 .bg-card-node-title {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
-  color: #cdd6f4;
+  color: #cba6f7;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 170px;
 }
 
-.bg-card-node-actions {
+.bg-card-node-item.is-pinned .bg-card-node-title {
+  color: #f9e2af;
+}
+
+.bg-card-drag-hint {
+  font-size: 9.5px;
+  color: #6c7086;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.bg-card-footer {
   display: flex;
   align-items: center;
-  gap: 2px;
+  justify-content: space-between;
+  margin-top: 3px;
+  gap: 6px;
+}
+
+.bg-card-tags-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+.bg-card-tag-badge {
+  display: inline-block;
+  background: rgba(203, 166, 247, 0.08);
+  border: 1px solid rgba(203, 166, 247, 0.2);
+  color: #b4befe;
+  font-size: 9.5px;
+  padding: 0 4px;
+  border-radius: 4px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: all 120ms ease;
+  user-select: none;
+}
+
+.bg-card-tag-badge:hover {
+  background: rgba(203, 166, 247, 0.22);
+  border-color: rgba(203, 166, 247, 0.45);
+  color: #ffffff;
+}
+
+.bg-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
 }
 
 .bg-card-action-btn {
-  background: transparent;
-  border: none;
-  color: #6c7086;
-  font-size: 11px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cdd6f4;
+  font-size: 10.5px;
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 2px 6px;
   border-radius: 4px;
-  transition: color 100ms ease, background-color 100ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.2;
+  transition: all 120ms ease;
+  user-select: none;
 }
 
 .bg-card-action-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #cdd6f4;
+  background: rgba(203, 166, 247, 0.15);
+  border-color: rgba(203, 166, 247, 0.35);
+  color: #cba6f7;
+}
+
+.bg-card-pin-btn {
+  background: none;
+  border: none;
+  color: #6c7086;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 120ms ease, transform 120ms ease;
 }
 
 .bg-card-pin-btn:hover {
   color: #f9e2af;
+  transform: scale(1.18);
+}
+
+.bg-card-pin-btn.is-pinned {
+  color: #f9e2af !important;
+}
+
+.bg-card-del-btn {
+  background: none;
+  border: none;
+  color: #f38ba8;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
 }
 
 .bg-card-del-btn:hover {
-  color: #f38ba8;
-}
-
-.bg-card-node-snippet {
-  font-size: 10.5px;
-  color: #a6adc8;
-  line-height: 1.4;
-  word-break: break-word;
+  background: rgba(243, 139, 168, 0.15);
 }
 
 .bg-cards-empty {

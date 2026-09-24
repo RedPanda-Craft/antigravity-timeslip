@@ -44,6 +44,7 @@
   }, 300);
 
   let isStoreSubscribed = false;
+  let storeUnsubscribe = null;
   const storeSubCheck = setInterval(() => {
     if (isStoreSubscribed) {
       clearInterval(storeSubCheck);
@@ -52,7 +53,7 @@
     const store = findHostStore();
     if (store && typeof store.subscribe === "function") {
       isStoreSubscribed = true;
-      store.subscribe(() => {
+      storeUnsubscribe = store.subscribe(() => {
         if (isUserTyping()) return;
         scheduleRefresh(300);
       });
@@ -106,7 +107,7 @@
 
   const onComposerSendClick = (e) => {
     const btn = e.target?.closest?.(
-      'button[data-testid*="send"], button[aria-label*="Send"], button[aria-label*="发送"], [data-testid="send-button"]'
+      'button[data-testid*="send"], button[aria-label*="Send" i], [data-testid="send-button"]'
     );
     if (btn) {
       clearJumpWarmth();
@@ -119,8 +120,8 @@
     const text = target.textContent || "";
     if (
       text.includes("Undo") ||
-      text.includes("回滚") ||
-      text.includes("撤销") ||
+      text.includes("Revert") ||
+      text.includes("Rollback") ||
       target.closest?.('[data-testid*="undo"], [data-action*="undo"]')
     ) {
       lastSyncedStepCount = -1;
@@ -164,6 +165,10 @@
     }
     clearInterval(pollInterval);
     clearInterval(storeSubCheck);
+    if (typeof storeUnsubscribe === "function") {
+      storeUnsubscribe();
+      storeUnsubscribe = null;
+    }
     clearTimeout(refreshDebounceTimer);
 
     document
@@ -175,6 +180,7 @@
     document.getElementById("bg-timeline-hud")?.remove();
     document.getElementById("bg-header-health-pill")?.remove();
     document.getElementById("bg-header-export-btn")?.remove();
+    document.getElementById("bg-header-cards-btn")?.remove();
     document.getElementById("bg-timeslip-extractor-overlay")?.remove();
     document.getElementById("bg-timeslip-cards-popover")?.remove();
     document.getElementById("bg-timeslip-attached-slot")?.remove();
@@ -182,6 +188,9 @@
 
     if (typeof unmountComposerCardsButton === "function") {
       unmountComposerCardsButton();
+    }
+    if (typeof unmountComposerDropTarget === "function") {
+      unmountComposerDropTarget();
     }
     if (typeof unmountCockpit === "function") {
       unmountCockpit();

@@ -6,6 +6,9 @@
   let activeCardSearch = "";
   let activeCardTag = "all";
   let hasHookedComposer = false;
+  let editingCardId = null;
+  let onCardsOutsideClick = null;
+  let onCardsKeydown = null;
 
   let activeCardTab = "cards"; // "cards" | "recent"
 
@@ -66,9 +69,45 @@
       if (searchInput) searchInput.focus();
       attachComposerDropTarget();
     });
+
+    // Close on click outside and Escape key
+    setTimeout(() => {
+      if (onCardsOutsideClick) document.removeEventListener("click", onCardsOutsideClick);
+      if (onCardsKeydown) document.removeEventListener("keydown", onCardsKeydown);
+
+      onCardsOutsideClick = (e) => {
+        if (
+          cardsPopoverEl &&
+          cardsPopoverEl.classList.contains("is-open") &&
+          !cardsPopoverEl.contains(e.target) &&
+          !e.target.closest(".bg-cards-trigger-btn") &&
+          !e.target.closest("#bg-header-cards-btn") &&
+          !e.target.closest(".bg-timeline-action-cards")
+        ) {
+          closeCardsPopover();
+        }
+      };
+      document.addEventListener("click", onCardsOutsideClick);
+
+      onCardsKeydown = (e) => {
+        if (e.key === "Escape" && isCardsPopoverOpen()) {
+          closeCardsPopover();
+        }
+      };
+      document.addEventListener("keydown", onCardsKeydown);
+    }, 50);
   }
 
   function closeCardsPopover() {
+    closeCardForm();
+    if (onCardsOutsideClick) {
+      document.removeEventListener("click", onCardsOutsideClick);
+      onCardsOutsideClick = null;
+    }
+    if (onCardsKeydown) {
+      document.removeEventListener("keydown", onCardsKeydown);
+      onCardsKeydown = null;
+    }
     if (cardsPopoverEl) {
       cardsPopoverEl.classList.remove("is-open");
       document.querySelectorAll(".bg-cards-trigger-btn").forEach((b) => b.classList.remove("bg-btn-active"));
@@ -87,7 +126,10 @@
           <span class="bg-cards-title-icon">📁</span>
           <span>Context Cards</span>
         </div>
-        <button type="button" class="bg-cards-close-btn" title="Close Cards (Esc)">✕</button>
+        <div class="bg-cards-header-actions">
+          <button type="button" class="bg-popover-add-btn" title="Create new card manually">+ New</button>
+          <button type="button" class="bg-cards-close-btn" title="Close Cards (Esc)">✕</button>
+        </div>
       </div>
       <div class="bg-popover-tabs">
         <button type="button" class="bg-popover-tab ${activeCardTab === "cards" ? "active" : ""}" data-tab="cards">
@@ -101,14 +143,31 @@
         <input type="text" class="bg-cards-search-input" placeholder="${activeCardTab === "cards" ? "🔍 Search cards, content, or tags..." : "🔍 Search recent side discussions..."}" value="${escapeHtml(activeCardSearch)}" />
       </div>
       <div class="bg-cards-tags-bar" id="bg-cards-tags-bar"></div>
+      <div class="bg-card-form-container" id="bg-card-form-container"></div>
       <div class="bg-cards-list-container" id="bg-cards-list-container"></div>
       <div class="bg-recent-footer-bar" id="bg-recent-footer-bar" style="display:none;"></div>
       <div class="bg-cards-popover-footer" id="bg-cards-popover-footer">
-        <span class="bg-cards-tip">Drag any card directly into chat · Click 📌 to pin</span>
+        <span class="bg-cards-tip">Drag any card directly into chat · Click ★ to pin</span>
       </div>
     `;
 
     pop.querySelector(".bg-cards-close-btn")?.addEventListener("click", closeCardsPopover);
+
+    pop.querySelector(".bg-popover-add-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (editingCardId === "new") {
+        closeCardForm();
+      } else {
+        if (activeCardTab !== "cards") {
+          activeCardTab = "cards";
+          activeCardSearch = "";
+          const sInput = pop.querySelector(".bg-cards-search-input");
+          if (sInput) sInput.value = "";
+          renderCardsPopoverContent();
+        }
+        showCardForm(null);
+      }
+    });
 
     pop.querySelectorAll(".bg-popover-tab").forEach((tabBtn) => {
       tabBtn.addEventListener("click", (e) => {
@@ -117,6 +176,7 @@
         if (activeCardTab !== targetTab) {
           activeCardTab = targetTab;
           activeCardSearch = "";
+          closeCardForm();
           const sInput = pop.querySelector(".bg-cards-search-input");
           if (sInput) sInput.value = "";
           renderCardsPopoverContent();
@@ -135,6 +195,86 @@
     });
 
     return pop;
+  }
+
+  function showCardForm(cardToEdit = null) {
+    if (!cardsPopoverEl) return;
+    const formContainer = cardsPopoverEl.querySelector("#bg-card-form-container");
+    if (!formContainer) return;
+
+    editingCardId = cardToEdit ? cardToEdit.id : "new";
+    const isEditing = Boolean(cardToEdit);
+
+    const initialTitle = isEditing ? cardToEdit.title : "";
+    const initialTags = isEditing ? (cardToEdit.tags || ["context"]).join(", ") : "context";
+    const initialContent = isEditing ? cardToEdit.content : "";
+
+    formContainer.innerHTML = `
+      <form class="bg-card-form">
+        <div class="bg-card-form-title">${isEditing ? "✏️ Edit Context Card" : "➕ New Context Card"}</div>
+        <input class="bg-card-form-input-title" type="text" maxlength="60" placeholder="Card title (e.g. Windows Path Spec)" value="${escapeHtml(initialTitle)}" required />
+        <input class="bg-card-form-input-tags" type="text" placeholder="Tags, comma-separated (e.g. context, rules, arch)" value="${escapeHtml(initialTags)}" />
+        <textarea class="bg-card-form-input-content" rows="3" placeholder="Card content or prompt text..." required>${escapeHtml(initialContent)}</textarea>
+        <div class="bg-card-form-actions">
+          <button type="button" class="bg-card-form-cancel">Cancel</button>
+          <button type="submit" class="bg-card-form-save">Save</button>
+        </div>
+      </form>
+    `;
+
+    const titleInput = formContainer.querySelector(".bg-card-form-input-title");
+    titleInput?.focus();
+
+    // Cancel
+    formContainer.querySelector(".bg-card-form-cancel")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeCardForm();
+    });
+
+    // Save
+    formContainer.querySelector(".bg-card-form")?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const title = formContainer.querySelector(".bg-card-form-input-title").value.trim();
+      const rawTags = formContainer.querySelector(".bg-card-form-input-tags").value.trim();
+      const content = formContainer.querySelector(".bg-card-form-input-content").value.trim();
+
+      if (!content) {
+        showToast("Card content cannot be empty", "warn");
+        return;
+      }
+
+      const tags = rawTags
+        .split(/[,，\s]+/)
+        .map((t) => t.replace(/^[#\s]+/, "").trim().toLowerCase())
+        .filter(Boolean);
+      if (tags.length === 0) tags.push("context");
+
+      if (isEditing) {
+        const target = timeslipCards.find((c) => c.id === editingCardId);
+        if (target) {
+          target.title = title || target.title || "Context Note";
+          target.content = sanitizeCardContent(content);
+          target.tags = tags;
+          saveCards(timeslipCards);
+          showToast(`Card updated: "${target.title}"`, "success");
+        }
+      } else {
+        addCard(content, title || "Context Note", null, tags);
+      }
+
+      closeCardForm();
+      renderCardsPopoverContent();
+    });
+  }
+
+  function closeCardForm() {
+    editingCardId = null;
+    if (cardsPopoverEl) {
+      const formContainer = cardsPopoverEl.querySelector("#bg-card-form-container");
+      if (formContainer) formContainer.innerHTML = "";
+    }
   }
 
   function updateCardsPopoverCounts() {
@@ -167,6 +307,7 @@
       renderTagsBar(cardsPopoverEl);
       renderCardsList(cardsPopoverEl);
     } else {
+      closeCardForm();
       if (tagsBar) tagsBar.style.display = "none";
       if (footerRecent) footerRecent.style.display = "flex";
       if (footerCards) footerCards.style.display = "none";
@@ -206,7 +347,7 @@
     if (activeCardTag === "pinned") {
       filtered = filtered.filter((c) => Boolean(c.isPinned));
     } else if (activeCardTag !== "all") {
-      filtered = filtered.filter((c) => Array.isArray(c.tags) && c.tags.includes(activeCardTag));
+      filtered = filtered.filter((c) => Array.isArray(c.tags) && c.tags.some((t) => t.toLowerCase() === activeCardTag.toLowerCase()));
     }
 
     if (activeCardSearch) {
@@ -223,7 +364,7 @@
         <div class="bg-cards-empty">
           <div class="bg-cards-empty-icon">📭</div>
           <div class="bg-cards-empty-text">No context cards found</div>
-          <div class="bg-cards-empty-sub">Extract turns from Timeline or promote from Side Stash</div>
+          <div class="bg-cards-empty-sub">Click "+ New" to create one, or promote from Side Stash</div>
         </div>
       `;
       return;
@@ -234,24 +375,35 @@
       cardEl.className = `bg-card-node-item ${card.isPinned ? "is-pinned" : ""}`;
       cardEl.setAttribute("draggable", "true");
 
+      const tagBadgesHtml = (card.tags || ["context"])
+        .map((t) => `<span class="bg-card-tag-badge" style="cursor:pointer;" title="Click to filter by #${escapeHtml(t)}">#${escapeHtml(t)}</span>`)
+        .join("");
+
       cardEl.innerHTML = `
         <div class="bg-card-node-header">
-          <div class="bg-card-node-title" title="${escapeHtml(card.title)}">
-            ${card.isPinned ? "📌 " : ""}${escapeHtml(card.title)}
-          </div>
-          <div class="bg-card-node-actions">
-            <button type="button" class="bg-card-action-btn bg-card-pin-btn" title="${card.isPinned ? "Unpin" : "Pin"}">
+          <div class="bg-card-node-title-wrap">
+            <button type="button" class="bg-card-pin-btn ${card.isPinned ? "is-pinned" : ""}" title="${card.isPinned ? "Unpin card" : "Pin card"}">
               ${card.isPinned ? "★" : "☆"}
             </button>
-            <button type="button" class="bg-card-action-btn bg-card-copy-btn" title="Copy Content">📋 Copy</button>
-            <button type="button" class="bg-card-action-btn bg-card-del-btn" title="Delete Card">🗑️</button>
+            <span class="bg-card-node-title" title="${escapeHtml(card.title)}">💡 ${escapeHtml(card.title)}</span>
           </div>
+          <span class="bg-card-drag-hint">⋮⋮ Drag to prompt</span>
         </div>
         <div class="bg-card-content" title="Click to expand/collapse full card">${escapeHtml(card.content)}</div>
+        <div class="bg-card-footer">
+          <div class="bg-card-tags-row">
+            ${tagBadgesHtml}
+          </div>
+          <div class="bg-card-actions">
+            <button type="button" class="bg-card-action-btn bg-card-edit-btn" title="Edit card title, body, and tags">✏️</button>
+            <button type="button" class="bg-card-action-btn bg-card-copy-btn" title="Copy Card Content">📋 Copy</button>
+            <button type="button" class="bg-card-del-btn" title="Delete Card">🗑️</button>
+          </div>
+        </div>
       `;
 
       cardEl.addEventListener("dragstart", (e) => {
-        const plainText = (card.content || "").trim();
+        let plainText = (card.content || "").trim();
         const cardData = {
           id: card.id,
           title: card.title,
@@ -268,10 +420,27 @@
         e.currentTarget.classList.toggle("expanded");
       });
 
+      cardEl.querySelectorAll(".bg-card-tag-badge").forEach((badge) => {
+        badge.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const tag = badge.textContent.replace(/^#/, "").trim().toLowerCase();
+          if (tag) {
+            activeCardTag = tag;
+            renderTagsBar(cardsPopoverEl);
+            renderCardsList(cardsPopoverEl);
+          }
+        });
+      });
+
       cardEl.querySelector(".bg-card-pin-btn")?.addEventListener("click", (e) => {
         e.stopPropagation();
         togglePinCard(card.id);
         renderCardsPopoverContent();
+      });
+
+      cardEl.querySelector(".bg-card-edit-btn")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showCardForm(card);
       });
 
       cardEl.querySelector(".bg-card-copy-btn")?.addEventListener("click", (e) => {
@@ -423,7 +592,11 @@
   async function insertTextIntoComposer(text) {
     if (!text) return false;
     const box = document.querySelector('[data-testid="agent-input-box"]');
-    if (!box) return false;
+    if (!box) {
+      plugin.log?.warn?.("[TIMESLIP_INSERT] agent-input-box not found in DOM");
+      return false;
+    }
+    plugin.log?.info?.(`[TIMESLIP_INSERT] Inserting text into composer (${text.length} chars)`);
 
     // Locate the editable node (Lexical or textarea)
     let root = null;
@@ -522,6 +695,25 @@
     return true;
   }
 
+  let activeDropTargetBox = null;
+  let onBoxDragOverHandler = null;
+  let onBoxDragLeaveHandler = null;
+  let onBoxDropHandler = null;
+
+  function unmountComposerDropTarget() {
+    if (activeDropTargetBox) {
+      if (onBoxDragOverHandler) activeDropTargetBox.removeEventListener("dragover", onBoxDragOverHandler, true);
+      if (onBoxDragLeaveHandler) activeDropTargetBox.removeEventListener("dragleave", onBoxDragLeaveHandler, true);
+      if (onBoxDropHandler) activeDropTargetBox.removeEventListener("drop", onBoxDropHandler, true);
+      delete activeDropTargetBox.dataset.bgTimeslipDropTargetAttached;
+      activeDropTargetBox.classList.remove("bg-composer-drop-active");
+      activeDropTargetBox = null;
+      onBoxDragOverHandler = null;
+      onBoxDragLeaveHandler = null;
+      onBoxDropHandler = null;
+    }
+  }
+
   function attachComposerDropTarget() {
     const legacySlot = document.getElementById("bg-timeslip-attached-slot");
     if (legacySlot) legacySlot.remove();
@@ -530,121 +722,58 @@
     if (!box || box.dataset.bgTimeslipDropTargetAttached) return;
 
     box.dataset.bgTimeslipDropTargetAttached = "true";
+    activeDropTargetBox = box;
 
-    box.addEventListener(
-      "dragover",
-      (e) => {
-        if (
-          e.dataTransfer.types.includes("application/x-bettergravity-card") ||
-          e.dataTransfer.types.includes("text/plain")
-        ) {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "copy";
-          box.classList.add("bg-composer-drop-active");
-        }
-      },
-      true
-    );
+    onBoxDragOverHandler = (e) => {
+      if (e.dataTransfer?.types?.includes("application/x-bettergravity-card")) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+        box.classList.add("bg-composer-drop-active");
+      }
+    };
+    box.addEventListener("dragover", onBoxDragOverHandler, true);
 
-    box.addEventListener(
-      "dragleave",
-      (e) => {
-        if (!box.contains(e.relatedTarget)) {
-          box.classList.remove("bg-composer-drop-active");
-        }
-      },
-      true
-    );
-
-    box.addEventListener(
-      "drop",
-      (e) => {
+    onBoxDragLeaveHandler = (e) => {
+      if (!box.contains(e.relatedTarget)) {
         box.classList.remove("bg-composer-drop-active");
-        const rawCard = e.dataTransfer.getData("application/x-bettergravity-card");
-        let textToInsert = "";
-        if (rawCard) {
-          try {
-            const parsed = JSON.parse(rawCard);
-            textToInsert = (parsed.content || "").trim();
-          } catch (_) {}
-        }
-        if (!textToInsert) {
-          textToInsert = (e.dataTransfer.getData("text/plain") || "").trim();
-        }
-
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-
-        if (!textToInsert) return;
-
-        setTimeout(() => {
-          insertTextIntoComposer(textToInsert);
-        }, 30);
-      },
-      true
-    );
-  }
-
-  function renderRailCardsIcon(rail) {
-    if (!rail) return;
-    let existing = rail.querySelector(".bg-timeline-action-cards");
-    if (!existing) {
-      existing = document.createElement("div");
-      existing.className = "bg-timeline-node bg-timeline-action-cards";
-      existing.title = "Timeslip Context Cards";
-      existing.innerHTML = `
-        <div class="bg-timeline-action-icon">🗂️</div>
-        <div class="bg-timeline-card bg-turn-details">
-          <div class="bg-timeline-card-header">
-            <span class="bg-timeline-step-label">Context Cards</span>
-          </div>
-          <div class="bg-timeline-snippet">Browse and attach saved cards (${timeslipCards.length})</div>
-        </div>
-      `;
-      existing.addEventListener("click", (e) => {
-        e.stopPropagation();
-        toggleCardsPopover(existing);
-      });
-      const exportNode = rail.querySelector(".bg-timeline-action-export");
-      if (exportNode && exportNode.nextSibling) {
-        exportNode.after(existing);
-      } else {
-        rail.prepend(existing);
       }
-    }
-  }
+    };
+    box.addEventListener("dragleave", onBoxDragLeaveHandler, true);
 
-  function renderHeaderCardsBtn(titleBar, exportBtn) {
-    if (!titleBar) return;
-    let btn = document.getElementById("bg-header-cards-btn");
-    if (!btn) {
-      btn = document.createElement("div");
-      btn.id = "bg-header-cards-btn";
-      btn.className = "bg-header-action-pill bg-header-cards-pill";
-      btn.setAttribute("data-no-drag", "");
-      btn.setAttribute("role", "button");
-      btn.setAttribute("tabindex", "0");
-      btn.title = "Timeslip Context Cards";
-      btn.innerHTML = `
-        <span class="bg-header-pill-icon">🗂️</span>
-        <span class="bg-header-pill-text">Cards</span>
-      `;
-
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        toggleCardsPopover(btn);
-      });
-    }
-
-    if (exportBtn && exportBtn.parentElement === titleBar) {
-      if (exportBtn.nextElementSibling !== btn) {
-        exportBtn.after(btn);
+    onBoxDropHandler = (e) => {
+      box.classList.remove("bg-composer-drop-active");
+      if (!e.dataTransfer?.types?.includes("application/x-bettergravity-card")) {
+        return; // Allow native file attachments and peer plugins to process drop
       }
-    } else if (btn.parentElement !== titleBar) {
-      titleBar.appendChild(btn);
-    }
+
+      const rawCard = e.dataTransfer.getData("application/x-bettergravity-card");
+      let textToInsert = "";
+      if (rawCard) {
+        try {
+          const parsed = JSON.parse(rawCard);
+          textToInsert = (parsed.content || "").trim();
+        } catch (_) {}
+      }
+      if (!textToInsert && e.dataTransfer) {
+        textToInsert = (e.dataTransfer.getData("text/plain") || "").trim();
+      }
+
+      if (!textToInsert) {
+        plugin.log?.warn?.("[TIMESLIP_DROP] Drop event fired but no text or card data found in dataTransfer");
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      plugin.log?.info?.(`[TIMESLIP_DROP] Card drop caught (${textToInsert.length} chars), deferring insertion by 30ms`);
+
+      setTimeout(() => {
+        insertTextIntoComposer(textToInsert);
+      }, 30);
+    };
+    box.addEventListener("drop", onBoxDropHandler, true);
   }
 
   function isComposerCardsEnabled() {

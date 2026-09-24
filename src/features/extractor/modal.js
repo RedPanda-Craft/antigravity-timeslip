@@ -28,6 +28,14 @@
         e.preventDefault();
         openTimeslipExtractorModal();
       });
+
+      btn.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.stopPropagation();
+          e.preventDefault();
+          openTimeslipExtractorModal();
+        }
+      });
     }
 
     if (healthPill && healthPill.parentElement === titleBar) {
@@ -36,30 +44,6 @@
       }
     } else if (btn.parentElement !== titleBar) {
       titleBar.appendChild(btn);
-    }
-  }
-
-  function renderRailExtractorIcon(rail, activeId) {
-    if (!rail) return;
-    let existing = rail.querySelector(".bg-timeline-action-export");
-    if (!existing) {
-      existing = document.createElement("div");
-      existing.className = "bg-timeline-node bg-timeline-action-export";
-      existing.title = "Extract / Export Conversation (Timeslip)";
-      existing.innerHTML = `
-        <div class="bg-timeline-action-icon">📥</div>
-        <div class="bg-timeline-card bg-turn-details">
-          <div class="bg-timeline-card-header">
-            <span class="bg-timeline-step-label">Extract Dialog</span>
-          </div>
-          <div class="bg-timeline-snippet">Open Timeslip conversation extractor</div>
-        </div>
-      `;
-      existing.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openTimeslipExtractorModal(activeId);
-      });
-      rail.prepend(existing);
     }
   }
 
@@ -281,7 +265,15 @@
     updateStats();
 
     // Event Wireup
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        closeModal();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+
     const closeModal = () => {
+      window.removeEventListener("keydown", onKeyDown);
       overlay.remove();
       if (activeExtractorModal === overlay) {
         activeExtractorModal = null;
@@ -293,14 +285,6 @@
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) closeModal();
     });
-
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") {
-        closeModal();
-        window.removeEventListener("keydown", onKeyDown);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
 
     // Filter checkbox handlers
     const setupFilterCb = (id, key) => {

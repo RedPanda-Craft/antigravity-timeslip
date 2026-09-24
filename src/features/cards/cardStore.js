@@ -13,14 +13,6 @@
   let recentBtw = [];
   const cardChangeListeners = new Set();
 
-  function subscribeCardsChange(fn) {
-    if (typeof fn === "function") {
-      cardChangeListeners.add(fn);
-      return () => cardChangeListeners.delete(fn);
-    }
-    return () => {};
-  }
-
   function notifyCardsChange() {
     cardChangeListeners.forEach((fn) => {
       try {
@@ -39,11 +31,11 @@
       .replace(/\.markdown-alert[^{]*\{[\s\S]*?\}/g, "") // Strip .markdown-alert styles
       .replace(/--color-[a-z0-9-]+:[^;]+;/g, "") // Strip CSS variable declarations
       .replace(/<context_card[^>]*>([\s\S]*?)<\/context_card>/gi, "$1") // Strip any legacy <context_card> tags
-      .replace(/---\s*\n+(?:【任务指令】|\[Task Instruction\]):\s*/gi, "") // Strip legacy separators
+      .replace(/---\s*\n+\[Task Instruction\]:\s*/gi, "") // Strip legacy separators
       .replace(/\n{3,}/g, "\n\n") // Normalize excessive blank lines
       .trim();
 
-    clean = clean.replace(/^(?:【探讨问题】|\[Side Question\]):\s*(.*?)\n+(?:【回答要点】|\[Key Points\]):\s*/i, "Context Note: $1\n\n");
+    clean = clean.replace(/^\[Side Question\]:\s*(.*?)\n+\[Key Points\]:\s*/i, "Context Note: $1\n\n");
     return clean;
   }
 

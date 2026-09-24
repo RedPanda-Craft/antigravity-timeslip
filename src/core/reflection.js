@@ -266,16 +266,6 @@
     if (userStepIndex < 0 || globalStep < 0 || !convId) {
       let fiber = findFiber(stepEl);
       for (let depth = 0; fiber && depth < 35; depth += 1, fiber = fiber.return) {
-        if (fiber.key !== null && fiber.key !== undefined && /^\d+$/.test(String(fiber.key))) {
-          const k = parseInt(fiber.key, 10);
-          if (k >= 0) {
-            const p = fiber.memoizedProps;
-            if (p?.step || p?.metadata) {
-              if (globalStep < 0) globalStep = k;
-            }
-          }
-        }
-
         for (const props of [fiber.memoizedProps, fiber.pendingProps]) {
           if (!props || typeof props !== "object") continue;
 
@@ -300,6 +290,16 @@
               globalStep = props.stepIndex;
             } else if (typeof props.step?.stepIndex === "number" && props.step.stepIndex >= 0) {
               globalStep = props.step.stepIndex;
+            }
+          }
+        }
+
+        if (globalStep < 0 && fiber.key !== null && fiber.key !== undefined && /^\d+$/.test(String(fiber.key))) {
+          const k = parseInt(fiber.key, 10);
+          if (k >= 0) {
+            const p = fiber.memoizedProps;
+            if (p?.step || p?.metadata) {
+              globalStep = k;
             }
           }
         }

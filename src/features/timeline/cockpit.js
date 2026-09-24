@@ -354,6 +354,8 @@
 
   function unmountCockpit() {
     closeTimeslipCockpit();
+    window.removeEventListener("click", onCockpitOutsideClick, true);
+    window.removeEventListener("keydown", onCockpitKeydown, true);
     if (cockpitPopupEl) {
       cockpitPopupEl.remove();
       cockpitPopupEl = null;
@@ -363,6 +365,7 @@
       cockpitButtonHandle = null;
     }
     document.getElementById("bg-timeslip-titlebar-btn")?.remove();
+    document.querySelectorAll(".bg-onboarding-callout").forEach((el) => el.remove());
   }
 
   // Dismiss on outside click and Escape
